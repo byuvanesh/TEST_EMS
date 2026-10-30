@@ -1,0 +1,35 @@
+-- 003: Optional telemetry_samples for DEMO isolation tests and future ingest.
+-- Phase 2a: no production ingest endpoint. REAL samples must not be created by ordinary seeds.
+
+CREATE TABLE telemetry_samples (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  site_id CHAR(36) NOT NULL,
+  gateway_id CHAR(36) NOT NULL,
+  meter_id CHAR(36) NOT NULL,
+  load_id CHAR(36) NOT NULL,
+  source_type ENUM('REAL','DEMO') NOT NULL,
+  schema_version VARCHAR(32) NOT NULL,
+  sample_time DATETIME(3) NOT NULL,
+  received_at DATETIME(3) NOT NULL,
+  sequence BIGINT UNSIGNED NOT NULL,
+  quality VARCHAR(16) NOT NULL,
+  active_power_kw DECIMAL(12,4) NULL,
+  current_a DECIMAL(12,4) NULL,
+  voltage_v DECIMAL(12,4) NULL,
+  power_factor DECIMAL(8,5) NULL,
+  frequency_hz DECIMAL(8,4) NULL,
+  reactive_power_kvar DECIMAL(12,4) NULL,
+  apparent_power_kva DECIMAL(12,4) NULL,
+  active_import_kwh DECIMAL(18,4) NULL,
+  payload_json JSON NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_telemetry_idempotency (gateway_id, meter_id, sequence, source_type),
+  KEY idx_telemetry_load_source_time (load_id, source_type, sample_time),
+  KEY idx_telemetry_site_source_time (site_id, source_type, sample_time),
+  CONSTRAINT fk_telemetry_site FOREIGN KEY (site_id) REFERENCES sites (id),
+  CONSTRAINT fk_telemetry_gateway FOREIGN KEY (gateway_id) REFERENCES gateways (id),
+  CONSTRAINT fk_telemetry_meter FOREIGN KEY (meter_id) REFERENCES meters (id),
+  CONSTRAINT fk_telemetry_load FOREIGN KEY (load_id) REFERENCES loads (id),
+  CONSTRAINT chk_telemetry_quality CHECK (quality IN ('LIVE','STALE','OFFLINE','UNKNOWN')),
+  CONSTRAINT chk_telemetry_source CHECK (source_type IN ('REAL','DEMO'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

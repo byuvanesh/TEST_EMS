@@ -1,0 +1,35 @@
+{
+  "schema_version": "testems.telemetry.v1",
+  "source_type": "DEMO",
+  "gateway_id": "gw_01",
+  "sent_at": "2026-10-30T06:15:00.000Z",
+  "samples": [
+    {
+      "meter_id": "mtr_ac03",
+      "load_id": "load_ac03",
+      "load_code": "AC-03",
+      "timestamp": "2026-10-30T06:14:58.000Z",
+      "sequence": 184422,
+      "quality": "UNKNOWN",
+      "electrical": {
+        "active_power_kw": 4.91,
+        "current_a": 8.82,
+        "voltage_v": 416.0,
+        "power_factor": 0.93,
+        "frequency_hz": 49.95,
+        "reactive_power_kvar": null,
+        "apparent_power_kva": null
+      },
+      "energy": {
+        "active_import_kwh": 12543.28,
+        "counter_unit": "kWh"
+      },
+      "capabilities": {
+        "reports_energy_import": true,
+        "reports_per_phase": false,
+        "reports_reactive": false,
+        "reports_thd": false
+      }
+    }
+  ]
+}

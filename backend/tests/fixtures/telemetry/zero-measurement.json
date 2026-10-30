@@ -1,0 +1,20 @@
+{
+  "schema_version": "testems.telemetry.v1",
+  "source_type": "DEMO",
+  "gateway_id": "gw_01",
+  "sent_at": "2026-10-30T06:15:00.000Z",
+  "samples": [
+    {
+      "meter_id": "mtr_ac01",
+      "load_id": "load_ac01",
+      "timestamp": "2026-10-30T06:14:58.000Z",
+      "sequence": 3,
+      "quality": "UNKNOWN",
+      "electrical": {
+        "active_power_kw": 0,
+        "current_a": 0,
+        "voltage_v": 0
+      }
+    }
+  ]
+}
