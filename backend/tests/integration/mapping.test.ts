@@ -36,14 +36,14 @@ beforeAll(async () => {
   const pool = getAppPool()
   const env = getEnv()
 
+  app = await buildApp()
+  await app.ready()
+
   // 1. Ensure admin user exists with must_change_password = 0 for mapping tests
   await pool.query(
     'UPDATE users SET must_change_password = 0 WHERE username = ?',
     ['admin'],
   )
-
-  app = await buildApp()
-  await app.ready()
 
   // 2. Log in as admin to obtain session cookie and CSRF token
   const loginRes = await app.inject({
