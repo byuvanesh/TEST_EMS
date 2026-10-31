@@ -64,6 +64,8 @@ export interface FakeLocalServer {
   closeAllWs(code: number): void
   /** Number of times /api/device/.../latest was hit */
   latestHitCount: number
+  /** Number of WebSocket connections accepted so far */
+  wsConnectionCount: number
   /** Stop the server */
   stop(): Promise<void>
 }
@@ -83,6 +85,7 @@ export async function startFakeLocalServer(
   let requestCount = 0
   let force401Next = false
   let latestHitCount = 0
+  let wsConnectionCount = 0
 
   const connectedWs = new Set<WebSocket>()
 
@@ -188,6 +191,7 @@ export async function startFakeLocalServer(
   // WebSocket server
   const wss = new WebSocketServer({ server })
   wss.on('connection', (ws, req) => {
+    wsConnectionCount++
     const cookies = parseCookies(req.headers['cookie'] ?? '')
     const sessionToken = cookies[COOKIE_NAME]
     const authed = sessionToken === FAKE_TOKEN
@@ -218,6 +222,7 @@ export async function startFakeLocalServer(
     baseUrl,
     mac,
     get latestHitCount() { return latestHitCount },
+    get wsConnectionCount() { return wsConnectionCount },
     setSnapshot(s: FakeSnapshot) {
       snapshot = s
     },
@@ -230,9 +235,9 @@ export async function startFakeLocalServer(
         try { ws.send(msg) } catch { /* ignore */ }
       }
     },
-    closeAllWs(code: number) {
+    closeAllWs(code: number, reason = 'Session expired') {
       for (const ws of connectedWs) {
-        try { ws.close(code) } catch { /* ignore */ }
+        try { ws.close(code, reason) } catch { /* ignore */ }
       }
       connectedWs.clear()
     },

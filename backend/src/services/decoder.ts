@@ -84,8 +84,14 @@ export function decodeMetric(
     if (!(key in rawPayload)) return null
     const val = rawPayload[key]
     if (val === null || val === undefined) return null
-    if (typeof val !== 'number' && typeof val !== 'string') return null
-    if (typeof val === 'string' && val.trim() === '') return null
+    if (Array.isArray(val)) {
+      if (val.length === 0 || val.some((v) => v === null || v === undefined || (typeof v !== 'number' && typeof v !== 'string'))) {
+        return null
+      }
+    } else {
+      if (typeof val !== 'number' && typeof val !== 'string') return null
+      if (typeof val === 'string' && val.trim() === '') return null
+    }
   }
 
   const scale = mapping.scale != null && !isNaN(Number(mapping.scale)) ? Number(mapping.scale) : 1
@@ -136,11 +142,21 @@ export function decodeMetric(
         w0 = Math.trunc(val0) & 0xffff
         w1 = Math.trunc(val1) & 0xffff
       } else {
-        const val = Number(rawPayload[source_keys[0]!])
-        if (isNaN(val) || !isFinite(val)) return null
-        const intVal = Math.trunc(val) >>> 0
-        w0 = (intVal >>> 16) & 0xffff
-        w1 = intVal & 0xffff
+        const raw = rawPayload[source_keys[0]!]
+        if (Array.isArray(raw)) {
+          if (raw.length < 2) return null
+          const val0 = Number(raw[0])
+          const val1 = Number(raw[1])
+          if (isNaN(val0) || isNaN(val1) || !isFinite(val0) || !isFinite(val1)) return null
+          w0 = Math.trunc(val0) & 0xffff
+          w1 = Math.trunc(val1) & 0xffff
+        } else {
+          const val = Number(raw)
+          if (isNaN(val) || !isFinite(val)) return null
+          const intVal = Math.trunc(val) >>> 0
+          w0 = (intVal >>> 16) & 0xffff
+          w1 = intVal & 0xffff
+        }
       }
 
       // Extract bytes for word 0 with byte-order adjustment

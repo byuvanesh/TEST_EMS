@@ -3,6 +3,7 @@ import {
   assertOperationalSourceType,
   dataStateForSample,
   getLatestRealSampleForLoad,
+  getRealSamplesHistoryForLoad,
 } from '../repositories/telemetryRepository.js'
 import { unavailableAnalytics } from './overviewService.js'
 
@@ -57,3 +58,27 @@ export async function buildLoadDetail(loadId: string, requestedSourceType?: stri
     analytics: unavailableAnalytics(),
   }
 }
+
+export async function buildLoadHistory(
+  loadId: string,
+  limit = 50,
+  requestedSourceType?: string,
+) {
+  assertOperationalSourceType(requestedSourceType)
+  const load = await getLoadById(loadId)
+  const samples = await getRealSamplesHistoryForLoad(loadId, limit)
+
+  return {
+    origin_assurance: 'LABEL_ONLY' as const,
+    source_type: 'REAL' as const,
+    load: {
+      id: load.id,
+      site_id: load.site_id,
+      code: load.code,
+      name: load.name,
+    },
+    count: samples.length,
+    samples,
+  }
+}
+

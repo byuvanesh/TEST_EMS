@@ -13,6 +13,7 @@ import { registerAnalyticsRoutes } from './modules/analytics/routes.js'
 import { registerAuthRoutes } from './modules/auth/routes.js'
 import { bootstrapAdminUser } from './modules/auth/service.js'
 import { registerSystemRoutes } from './modules/system/routes.js'
+import { registerBridgeRoutes } from './modules/bridge/routes.js'
 
 export async function buildApp() {
   const env = getEnv()
@@ -52,6 +53,7 @@ export async function buildApp() {
   await registerAnalyticsRoutes(app)
   await registerAuthRoutes(app)
   await registerSystemRoutes(app)
+  await registerBridgeRoutes(app)
 
   try {
     const pool = getAppPool()

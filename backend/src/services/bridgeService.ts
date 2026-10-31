@@ -23,6 +23,7 @@ import type { DbPool } from '../database/pool.js'
 import { LocalServerClient, LocalServerAuthError, createLocalServerClient } from './localServerClient.js'
 import { createHash } from 'node:crypto'
 import type { AppEnv } from '../config/env.js'
+import { processRawPayload } from './telemetryPipeline.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -59,6 +60,8 @@ export class BridgeService {
   private ws: import('ws').WebSocket | null = null
   private pollTimer: ReturnType<typeof setInterval> | null = null
   private running = false
+  private wsConnected = false
+  private lastReceiveTime: string | null = null
   private lastSeenTs: number | null = null
   readonly metrics: BridgeMetrics = {
     pollsTotal: 0,
@@ -87,6 +90,7 @@ export class BridgeService {
     }
     if (this.running) return
     this.running = true
+    setActiveBridge(this)
 
     // Never log password
     this.log.info('BridgeService: starting', {
@@ -125,6 +129,8 @@ export class BridgeService {
   async stop(): Promise<void> {
     if (!this.running) return
     this.running = false
+    this.wsConnected = false
+    if (activeBridgeService === this) setActiveBridge(null)
     this.log.info('BridgeService: stopping')
 
     if (this.pollTimer) {
@@ -187,6 +193,8 @@ export class BridgeService {
     this.ws = this.client.openLiveSocket({
       onMessage: (frame) => {
         this.metrics.wsFramesTotal++
+        this.wsConnected = true
+        this.lastReceiveTime = new Date().toISOString()
 
         // Ignore the hello frame
         if (frame['type'] === 'hello') return
@@ -199,6 +207,7 @@ export class BridgeService {
       },
       onAuthError: () => {
         this.metrics.authErrors++
+        this.wsConnected = false
         this.log.warn('BridgeService: WS closed with 4401 — session expired, re-logging in')
         this.ws = null
         void this.reLogin()
@@ -206,6 +215,7 @@ export class BridgeService {
       onClose: (code, reason) => {
         this.log.warn('BridgeService: WS closed', { code, reason })
         this.ws = null
+        this.wsConnected = false
         if (this.running) {
           // Do a catch-up poll then reopen WS after a short delay
           setTimeout(() => {
@@ -220,6 +230,7 @@ export class BridgeService {
           message: err.message,
         })
         this.ws = null
+        this.wsConnected = false
       },
     })
   }
@@ -286,12 +297,24 @@ export class BridgeService {
         [mac, localServerTs, payloadHash, payloadJson],
       )
       this.lastSeenTs = localServerTs
+      this.lastReceiveTime = new Date().toISOString()
       this.metrics.archiveInserts++
       this.log.debug('BridgeService: archived snapshot', {
         ts: localServerTs,
         hash: payloadHash.slice(0, 8) + '...',
         source,
       })
+
+      // Step 5: Decode archived raw payload into telemetry_samples
+      try {
+        await processRawPayload(this.pool, mac, localServerTs, payload, 1)
+      } catch (pipelineErr) {
+        this.metrics.decodeErrors++
+        this.log.error('BridgeService: telemetry pipeline processing error', {
+          message: pipelineErr instanceof Error ? pipelineErr.message : String(pipelineErr),
+        })
+      }
+
       return 'inserted'
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -307,6 +330,38 @@ export class BridgeService {
       throw err
     }
   }
+
+  getStatus(): {
+    status: 'connected' | 'polling' | 'disconnected' | 'disabled'
+    mode: 'WS' | 'polling' | 'none'
+    last_receive_time: string | null
+    metrics: BridgeMetrics
+  } {
+    if (!this.running) {
+      return {
+        status: this.env.BRIDGE_ENABLED ? 'disconnected' : 'disabled',
+        mode: 'none',
+        last_receive_time: this.lastReceiveTime,
+        metrics: { ...this.metrics },
+      }
+    }
+    return {
+      status: this.wsConnected ? 'connected' : 'polling',
+      mode: this.wsConnected ? 'WS' : 'polling',
+      last_receive_time: this.lastReceiveTime,
+      metrics: { ...this.metrics },
+    }
+  }
+}
+
+let activeBridgeService: BridgeService | null = null
+
+export function getActiveBridge(): BridgeService | null {
+  return activeBridgeService
+}
+
+export function setActiveBridge(bridge: BridgeService | null): void {
+  activeBridgeService = bridge
 }
 
 // ---------------------------------------------------------------------------

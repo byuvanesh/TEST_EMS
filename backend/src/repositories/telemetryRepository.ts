@@ -128,6 +128,35 @@ function mapSample(row: RowDataPacket): RealLatestSample {
   }
 }
 
+export async function getRealSamplesHistoryForLoad(
+  loadId: string,
+  limit = 50,
+): Promise<RealLatestSample[]> {
+  const [rows] = await getAppPool().query<RowDataPacket[]>(
+    `SELECT load_id, sample_time, active_power_kw, current_a, voltage_v, power_factor,
+            frequency_hz, reactive_power_kvar, apparent_power_kva, active_import_kwh
+     FROM telemetry_samples
+     WHERE load_id = ? AND source_type = 'REAL'
+     ORDER BY sample_time DESC, id DESC
+     LIMIT ?`,
+    [loadId, limit],
+  )
+  return rows.map((r) => mapSample(r))
+}
+
 export function dataStateForSample(sample: RealLatestSample | null): DataStatePhase2a {
-  return sample ? 'UNKNOWN' : 'NO_DATA'
+  if (!sample) return 'NO_DATA'
+  if (
+    sample.active_power_kw === null &&
+    sample.current_a === null &&
+    sample.voltage_v === null &&
+    sample.power_factor === null &&
+    sample.frequency_hz === null &&
+    sample.reactive_power_kvar === null &&
+    sample.apparent_power_kva === null &&
+    sample.active_import_kwh === null
+  ) {
+    return 'NO_DATA'
+  }
+  return 'UNKNOWN'
 }

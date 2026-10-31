@@ -388,36 +388,96 @@ describe('Step 2 — Bridge (LocalServerClient + BridgeService)', () => {
     }
   })
 
-  it('BR-11: WS close 4401 sets authErrors counter on BridgeService', async () => {
+  it('BR-11: WS close 4401 sets authErrors counter and performs catch-up GET /latest before reopening WebSocket', async () => {
     await truncateRawPayloads()
-    const fake = await startFakeLocalServer({ mac: MAC, wsForce4401: true })
+    const ts1 = 1_700_000_000_000
+    const ts2 = 1_700_000_005_000
+
+    const fake = await startFakeLocalServer({
+      mac: MAC,
+      snapshot: { ts: ts1, payload: { s1_hold1: 100 } },
+    })
+
     try {
-      const env = makeEnv({ LOCAL_SERVER_URL: fake.baseUrl, GATEWAY_MAC: MAC })
+      const env = makeEnv({
+        LOCAL_SERVER_URL: fake.baseUrl,
+        GATEWAY_MAC: MAC,
+        LOCAL_SERVER_POLL_INTERVAL_MS: 60_000,
+      })
       const pool = getMigratePool()
       const bridge = new BridgeService(env, pool, spyLog)
 
-      // Manually test the WS close 4401 path by creating a client and
-      // opening a WebSocket — expect it to be closed with 4401
-      const client = new LocalServerClient({
-        baseUrl: env.LOCAL_SERVER_URL,
-        gatewayMac: env.GATEWAY_MAC,
-        timeoutMs: env.LOCAL_SERVER_TIMEOUT_MS,
-        maxPayloadBytes: env.LOCAL_SERVER_MAX_PAYLOAD_BYTES,
-        maxRetries: 0,
-        log: spyLog,
-      })
-      await client.login('admin', TEST_PASSWORD)
+      // Start the bridge: logs in, performs initial poll, opens WS
+      await bridge.start()
+      expect(bridge.metrics.archiveInserts).toBe(1)
+      expect(fake.latestHitCount).toBe(1)
 
-      const authErrReceived = await new Promise<boolean>((resolve) => {
-        client.openLiveSocket({
-          onMessage: () => { /* ignored */ },
-          onAuthError: () => resolve(true),
-          onClose: (_code) => resolve(false),
-          onError: () => resolve(false),
-        })
-        setTimeout(() => resolve(false), 3000)
+      // Wait for initial WS connection to establish
+      await new Promise<void>((resolve, reject) => {
+        const start = Date.now()
+        const check = setInterval(() => {
+          if (fake.wsConnectionCount >= 1) {
+            clearInterval(check)
+            resolve()
+          } else if (Date.now() - start > 2000) {
+            clearInterval(check)
+            reject(new Error('Timeout waiting for initial WS connection'))
+          }
+        }, 20)
       })
-      expect(authErrReceived).toBe(true)
+      expect(fake.wsConnectionCount).toBe(1)
+
+      // Confirm initial snapshot ts1 was archived
+      const [rows1] = await pool.query<RowDataPacket[]>(
+        'SELECT local_server_ts FROM raw_payloads WHERE local_server_ts = ?',
+        [ts1],
+      )
+      expect(rows1.length).toBe(1)
+
+      // Server receives new data while WS is open
+      fake.setSnapshot({ ts: ts2, payload: { s1_hold1: 200 } })
+
+      // Trigger 4401 on active WebSocket
+      fake.closeAllWs(4401)
+
+      // Wait for BridgeService to handle 4401:
+      // onAuthError -> authErrors++ -> reLogin() [login -> doPoll() -> openWs()]
+      await new Promise<void>((resolve, reject) => {
+        const start = Date.now()
+        const check = setInterval(() => {
+          if (
+            bridge.metrics.authErrors >= 1 &&
+            fake.latestHitCount >= 2 &&
+            fake.wsConnectionCount >= 2
+          ) {
+            clearInterval(check)
+            resolve()
+          } else if (Date.now() - start > 4000) {
+            clearInterval(check)
+            reject(
+              new Error(
+                `Timeout: authErrors=${bridge.metrics.authErrors}, latestHitCount=${fake.latestHitCount}, wsConnectionCount=${fake.wsConnectionCount}`,
+              ),
+            )
+          }
+        }, 50)
+      })
+
+      // Verify bridge metrics
+      expect(bridge.metrics.authErrors).toBe(1)
+      expect(fake.latestHitCount).toBe(2)
+      expect(fake.wsConnectionCount).toBe(2)
+      expect(bridge.metrics.archiveInserts).toBe(2)
+
+      // Verify the catch-up poll archived ts2 to raw_payloads
+      const [rows2] = await pool.query<RowDataPacket[]>(
+        'SELECT local_server_ts FROM raw_payloads WHERE local_server_ts = ?',
+        [ts2],
+      )
+      expect(rows2.length).toBe(1)
+      expect(rows2[0]?.local_server_ts).toBe(ts2)
+
+      await bridge.stop()
     } finally {
       await fake.stop()
     }

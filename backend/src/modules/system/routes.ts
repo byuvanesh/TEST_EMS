@@ -6,6 +6,7 @@ import { getAppPool } from '../../database/pool.js'
 import { authenticate } from '../auth/middleware.js'
 import { badRequest, notFound } from '../../utils/errors.js'
 import { decodeMetric, type DecodeType, type WordOrder, type ByteOrder, type VerificationStatus } from '../../services/decoder.js'
+import { getActiveBridge } from '../../services/bridgeService.js'
 
 const MappingItemSchema = z.object({
   metric: z.string().min(1, 'Metric identifier is required'),
@@ -372,4 +373,61 @@ export async function registerSystemRoutes(app: FastifyInstance): Promise<void> 
       })
     },
   )
+
+  // --------------------------------------------------------------------------
+  // GET /api/system/gateway — Gateway status from local_server/bridge
+  // --------------------------------------------------------------------------
+  app.get('/api/system/gateway', async (_req, reply) => {
+    const pool = getAppPool()
+    const [gwRows] = await pool.query<RowDataPacket[]>(
+      `SELECT id, site_id, code, mac, name, firmware_version, rs485_master_verified
+       FROM gateways
+       WHERE source_type = 'REAL'
+       LIMIT 1`,
+    )
+    const gw = gwRows[0]
+    if (!gw) {
+      throw notFound('GATEWAY_NOT_FOUND', 'No REAL gateway configured')
+    }
+
+    const bridge = getActiveBridge()
+    const bridgeStatus = bridge ? bridge.getStatus() : {
+      status: 'disabled' as const,
+      mode: 'none' as const,
+      last_receive_time: null,
+    }
+
+    const [meterRows] = await pool.query<RowDataPacket[]>(
+      `SELECT m.id AS meter_id, m.label, m.slave_id, m.status, m.modbus_variant_verified
+       FROM meters m
+       INNER JOIN gateway_meter_links gml ON gml.meter_id = m.id
+       WHERE gml.gateway_id = ? AND m.source_type = 'REAL'
+       ORDER BY m.id ASC`,
+      [gw.id],
+    )
+
+    const meters = meterRows.map((m) => ({
+      meter_id: m.meter_id,
+      label: m.label,
+      slave_id: m.slave_id,
+      state_assurance: 'gateway-level only' as const,
+      status: bridgeStatus.status === 'connected' ? 'online' : 'unknown',
+      note: 'Meter state labeled "gateway-level only" until a bench test proves per-meter failure behavior.',
+    }))
+
+    return reply.status(200).send({
+      gateway: {
+        id: gw.id,
+        code: gw.code,
+        name: gw.name,
+        mac: gw.mac,
+        firmware_version: gw.firmware_version,
+        rs485_master_verified: Boolean(gw.rs485_master_verified),
+        status: bridgeStatus.status,
+        mode: bridgeStatus.mode,
+        last_receive_time: bridgeStatus.last_receive_time,
+      },
+      meters,
+    })
+  })
 }
