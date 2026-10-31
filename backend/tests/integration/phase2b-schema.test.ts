@@ -261,4 +261,86 @@ describe('Phase 2b Schema & Migrations Integration', () => {
     expect(sessions.length).toBe(1)
     expect(sessions[0]?.user_id).toBe(userId)
   })
+
+  it('P2B-07: Migration 005 CHECK constraint rejects VERIFIED status without required evidence', async () => {
+    const pool = getMigratePool()
+    const [meters] = await pool.query<RowDataPacket[]>('SELECT id FROM meters LIMIT 1')
+    const meterId = String(meters[0]?.id)
+
+    const mappingId = newId()
+    // 1. Attempting to insert a VERIFIED mapping with NULL verified_by/verified_at/evidence_note must FAIL check constraint
+    let checkFailed = false
+    try {
+      await pool.query(
+        `INSERT INTO metric_mappings (
+           id, meter_id, metric, source_keys, decode, word_order, byte_order, scale, offset, unit,
+           verification_status, verified_by, verified_at, evidence_note, version, created_at, updated_at
+         ) VALUES (?, ?, 'current_avg', ?, 'number', 'BE', 'BE', 0.01, 0, 'A', 'VERIFIED', NULL, NULL, NULL, 1, UTC_TIMESTAMP(3), UTC_TIMESTAMP(3))`,
+        [mappingId, meterId, JSON.stringify(['s1_hold2'])],
+      )
+    } catch (err) {
+      checkFailed = true
+      const msg = err instanceof Error ? err.message : String(err)
+      expect(msg).toMatch(/Check constraint 'chk_mm_verified_fields' is violated/i)
+    }
+    expect(checkFailed).toBe(true)
+
+    // 2. Inserting with UNVERIFIED status succeeds even with null evidence
+    await pool.query(
+      `INSERT INTO metric_mappings (
+         id, meter_id, metric, source_keys, decode, word_order, byte_order, scale, offset, unit,
+         verification_status, verified_by, verified_at, evidence_note, version, created_at, updated_at
+       ) VALUES (?, ?, 'current_avg', ?, 'number', 'BE', 'BE', 0.01, 0, 'A', 'UNVERIFIED', NULL, NULL, NULL, 1, UTC_TIMESTAMP(3), UTC_TIMESTAMP(3))`,
+      [mappingId, meterId, JSON.stringify(['s1_hold2'])],
+    )
+
+    // 3. Updating to VERIFIED without evidence must also fail
+    let updateFailed = false
+    try {
+      await pool.query(
+        `UPDATE metric_mappings SET verification_status = 'VERIFIED' WHERE id = ?`,
+        [mappingId],
+      )
+    } catch (err) {
+      updateFailed = true
+      const msg = err instanceof Error ? err.message : String(err)
+      expect(msg).toMatch(/Check constraint 'chk_mm_verified_fields' is violated/i)
+    }
+    expect(updateFailed).toBe(true)
+
+    // 4. Updating to VERIFIED with complete evidence succeeds
+    await pool.query(
+      `UPDATE metric_mappings SET
+         verification_status = 'VERIFIED',
+         verified_by = 'qa_engineer',
+         verified_at = UTC_TIMESTAMP(3),
+         evidence_note = 'Matched against meter display reading 230.5 V'
+       WHERE id = ?`,
+      [mappingId],
+    )
+
+    const [verifiedRow] = await pool.query<RowDataPacket[]>(
+      'SELECT verification_status, verified_by FROM metric_mappings WHERE id = ?',
+      [mappingId],
+    )
+    expect(verifiedRow[0]?.verification_status).toBe('VERIFIED')
+    expect(verifiedRow[0]?.verified_by).toBe('qa_engineer')
+
+    // 5. Duplicate (meter_id, metric) must fail unique constraint
+    let duplicateMetricFailed = false
+    try {
+      await pool.query(
+        `INSERT INTO metric_mappings (
+           id, meter_id, metric, source_keys, decode, word_order, byte_order, scale, offset, unit,
+           verification_status, version, created_at, updated_at
+         ) VALUES (?, ?, 'current_avg', ?, 'number', 'BE', 'BE', 0.01, 0, 'A', 'UNVERIFIED', 1, UTC_TIMESTAMP(3), UTC_TIMESTAMP(3))`,
+        [newId(), meterId, JSON.stringify(['s1_hold3'])],
+      )
+    } catch (err) {
+      duplicateMetricFailed = true
+      const msg = err instanceof Error ? err.message : String(err)
+      expect(msg).toMatch(/Duplicate entry.*uq_metric_mapping_meter_metric/i)
+    }
+    expect(duplicateMetricFailed).toBe(true)
+  })
 })
