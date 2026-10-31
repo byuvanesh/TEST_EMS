@@ -41,6 +41,8 @@ const EnvSchema = z.object({
   LOCAL_SERVER_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
   LOCAL_SERVER_MAX_PAYLOAD_BYTES: z.coerce.number().int().positive().default(262144),
   STALE_THRESHOLD_SECONDS: z.coerce.number().int().positive().default(60),
+  INITIAL_ADMIN_PASSWORD: z.string().default(''),
+  SESSION_SECRET: z.string().default('test_ems_default_session_secret_change_in_prod'),
 })
 
 export type AppEnv = z.infer<typeof EnvSchema>

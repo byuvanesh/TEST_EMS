@@ -19,8 +19,11 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.5",
     "@fastify/cors": "^11.1.0",
     "@fastify/rate-limit": "^10.3.0",
+    "@types/bcrypt": "^6.0.0",
+    "bcrypt": "^6.0.0",
     "dotenv": "^17.2.3",
     "fastify": "^5.6.1",
     "mysql2": "^3.15.1",
