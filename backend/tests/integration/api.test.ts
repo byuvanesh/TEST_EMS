@@ -194,4 +194,21 @@ describe('API integration (MySQL 8)', () => {
     expect(text.includes('"data_state":"STALE"')).toBe(false)
     expect(text.includes('"data_state":"OFFLINE"')).toBe(false)
   })
+
+  it('AT-22: GET /api/system/config is registered on buildApp() and requires auth (smoke test)', async () => {
+    // 1. Verify route appears in the Fastify routing table
+    const routes = app.printRoutes()
+    expect(routes).toMatch(/system\/[\s\S]*config \(GET/)
+
+    // 2. An unauthenticated request must hit the route handler (or preHandler) and return 401
+    //    If the route was not mounted or had a prefix mismatch, it would return 404 Route not found.
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/system/config',
+    })
+    expect(res.statusCode).toBe(401)
+    const body = res.json()
+    expect(body.error?.code).toBe('UNAUTHORIZED')
+    expect(body.error?.message).toBe('Authentication required')
+  })
 })

@@ -185,7 +185,7 @@ describe('ApiSystemConfigResponse contract', () => {
     }
     expect(mockConfig.local_server_url).toBe('http://127.0.0.1:3333')
 
-    const asRecord = mockConfig as Record<string, unknown>
+    const asRecord = mockConfig as unknown as Record<string, unknown>
     expect('LOCAL_SERVER_USER' in asRecord).toBe(false)
     expect('LOCAL_SERVER_PASSWORD' in asRecord).toBe(false)
     expect('GATEWAY_MAC' in asRecord).toBe(false)
@@ -211,5 +211,40 @@ describe('ApiSystemConfigResponse contract', () => {
     expect(registrationUrl).not.toContain('password')
     expect(registrationUrl).not.toContain('user')
     expect(registrationUrl).not.toContain('mac')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// LocalServerRegistrationCard UI behavior & regression tests
+// ---------------------------------------------------------------------------
+
+import systemPageSource from './SystemPage.tsx?raw'
+
+describe('LocalServerRegistrationCard UI & regression guard', () => {
+  it('unconditionally renders LocalServerRegistrationCard in SystemPage.tsx', () => {
+    // Regression check: the card must NOT be gated behind a ternary that hides the whole card on error
+    expect(systemPageSource).toContain('<LocalServerRegistrationCard')
+    // Confirm the old anti-pattern is gone: `{sysConfig.data ? <LocalServerRegistrationCard ... : <Card>...}`
+    expect(systemPageSource).not.toContain('{sysConfig.data ? (\n        <LocalServerRegistrationCard')
+  })
+
+  it('renders disabled button when config is null or errored', () => {
+    // Confirms disabled attribute is present in component for unavailable states
+    expect(systemPageSource).toContain('disabled')
+    expect(systemPageSource).toContain('aria-disabled="true"')
+    expect(systemPageSource).toContain('local-server-config-warning')
+  })
+
+  it('renders active <a> link with target="_blank" and rel="noopener noreferrer" when URL is available', () => {
+    expect(systemPageSource).toContain('id="btn-register-gateway-local-server"')
+    expect(systemPageSource).toContain('target="_blank"')
+    expect(systemPageSource).toContain('rel="noopener noreferrer"')
+  })
+
+  it('does not contain any form inputs for MAC or API key (read-only navigation only)', () => {
+    // LocalServerRegistrationCard must only contain the convenience link and text instructions
+    expect(systemPageSource).not.toContain('name="mac"')
+    expect(systemPageSource).not.toContain('name="apiKey"')
+    expect(systemPageSource).not.toContain('name="api_key"')
   })
 })

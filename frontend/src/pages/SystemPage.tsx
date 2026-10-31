@@ -983,8 +983,32 @@ function GatewayStatusCard({ gw }: { gw: ApiSystemGatewayResponse }) {
  * - It is purely a navigation convenience: window.open / target="_blank".
  * - No form fields for MAC or API key are submitted anywhere from here.
  */
-function LocalServerRegistrationCard({ config }: { config: ApiSystemConfigResponse }) {
-  const registrationUrl = `${config.local_server_url}/devices`
+interface LocalServerRegistrationCardProps {
+  config: ApiSystemConfigResponse | null
+  loading?: boolean
+  error?: string | null
+}
+
+/**
+ * Renders the LOCAL_SERVER_URL field and a button that opens
+ * `${local_server_url}/devices` in a new tab so the operator can register
+ * the gateway on local_server themselves.
+ *
+ * Design constraints:
+ * - Always rendered even if configuration is missing or endpoint errored.
+ * - If URL is unavailable, displays a configuration warning and disables the button.
+ * - This component never POSTs or fetches anything from local_server.
+ * - It is purely a navigation convenience: window.open / target="_blank".
+ * - No form fields for MAC or API key are submitted anywhere from here.
+ */
+export function LocalServerRegistrationCard({
+  config,
+  loading = false,
+  error = null,
+}: LocalServerRegistrationCardProps) {
+  const url = config?.local_server_url?.trim() || ''
+  const isAvailable = Boolean(url && !error)
+  const registrationUrl = isAvailable ? `${url}/devices` : '#'
 
   return (
     <Card>
@@ -993,6 +1017,18 @@ function LocalServerRegistrationCard({ config }: { config: ApiSystemConfigRespon
         subtitle="Convenience link only · TEST_EMS does not write to local_server"
         action={<ExternalLink className="h-4 w-4 text-text-secondary" />}
       />
+
+      {/* Warning banner when URL is unavailable */}
+      {!isAvailable && !loading && (
+        <div
+          id="local-server-config-warning"
+          className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-500"
+        >
+          {error
+            ? `local_server URL unavailable: ${error}`
+            : 'LOCAL_SERVER_URL is not configured on the backend.'}
+        </div>
+      )}
 
       {/* LOCAL_SERVER_URL labeled field */}
       <div className="mb-4">
@@ -1003,21 +1039,34 @@ function LocalServerRegistrationCard({ config }: { config: ApiSystemConfigRespon
           id="local-server-url-display"
           className="rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-text"
         >
-          {config.local_server_url}
+          {loading ? 'Loading…' : url || '(not configured)'}
         </p>
       </div>
 
-      {/* Open local_server devices page */}
-      <a
-        id="btn-register-gateway-local-server"
-        href={registrationUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 rounded-[8px] border border-border bg-card px-4 py-2 text-xs font-medium text-text transition-colors hover:bg-surface"
-      >
-        <ExternalLink className="h-3.5 w-3.5" />
-        Register gateway on local_server
-      </a>
+      {/* Open local_server devices page or disabled button */}
+      {isAvailable ? (
+        <a
+          id="btn-register-gateway-local-server"
+          href={registrationUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-[8px] border border-border bg-card px-4 py-2 text-xs font-medium text-text transition-colors hover:bg-surface"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          Register gateway on local_server
+        </a>
+      ) : (
+        <button
+          id="btn-register-gateway-local-server"
+          disabled
+          aria-disabled="true"
+          title="local_server URL is unavailable"
+          className="inline-flex cursor-not-allowed items-center gap-2 rounded-[8px] border border-border bg-card px-4 py-2 text-xs font-medium text-text-secondary opacity-50"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          Register gateway on local_server
+        </button>
+      )}
 
       {/* Instructions — plain text, no form interaction */}
       <p className="mt-4 text-[11px] leading-relaxed text-text-secondary">
@@ -1143,16 +1192,12 @@ export function SystemPage() {
         )}
       </div>
 
-      {/* local_server registration convenience card */}
-      {sysConfig.data ? (
-        <LocalServerRegistrationCard config={sysConfig.data} />
-      ) : sysConfig.error ? (
-        <Card>
-          <p className="text-xs text-text-secondary">
-            local_server URL unavailable: {sysConfig.error}
-          </p>
-        </Card>
-      ) : null}
+      {/* local_server registration convenience card — always rendered */}
+      <LocalServerRegistrationCard
+        config={sysConfig.data}
+        loading={sysConfig.loading}
+        error={sysConfig.error}
+      />
 
       {/* Mapping Test Tool */}
       {mapping.data && mapping.data.meters.length > 0 ? (
