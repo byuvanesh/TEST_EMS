@@ -6,6 +6,7 @@ import {
   Settings2,
   Zap,
 } from 'lucide-react'
+import { FirstLoginPrompt } from '@/components/auth/FirstLoginPrompt'
 import { useAlarmStore } from '@/context/AlarmStore'
 import { buildOverviewData } from '@/mock/demoData'
 import { Sidebar } from './Sidebar'
@@ -22,6 +23,7 @@ const MOBILE_TABS = [
 export function AppShell() {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const { openAlarms, openCount } = useAlarmStore()
   const overview = buildOverviewData(openAlarms)
 
@@ -47,9 +49,14 @@ export function AppShell() {
           dataState={overview.globalDataState}
           activeAlarmCount={openCount}
           onMenuClick={() => setMobileOpen(true)}
+          changePasswordOpen={changePasswordOpen}
+          onChangePasswordOpenChange={setChangePasswordOpen}
         />
 
         <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-5 pb-20 md:px-6 md:pb-5">
+          <FirstLoginPrompt
+            onOpenChangePassword={() => setChangePasswordOpen(true)}
+          />
           <Outlet />
         </main>
 
