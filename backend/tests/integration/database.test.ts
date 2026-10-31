@@ -184,6 +184,38 @@ describe('database integration (MySQL 8)', () => {
     // Restore clean state
     await runMigrations()
   })
+
+  // Housekeeping H4: Confirm MySQL version >= 8.0 and that CHECK constraints
+  // are enforced by the database engine (not just application-level validation).
+  it('H4-AT-09: MySQL version is 8.0 or later', async () => {
+    const [rows] = await getMigratePool().query<RowDataPacket[]>('SELECT VERSION() AS v')
+    const version = String(rows[0]?.v ?? '')
+    const major = parseInt(version.split('.')[0] ?? '0', 10)
+    expect(major).toBeGreaterThanOrEqual(8)
+  })
+
+  it('H4-AT-10: CHECK constraint violation is rejected by MySQL engine (not application)', async () => {
+    // The meters table has chk_meter_status CHECK (status IN ('planned','installed','retired','offline'))
+    // Attempt to insert a row with an invalid status directly via the DB pool — no application code path.
+    const pool = getMigratePool()
+    const [sites] = await pool.query<RowDataPacket[]>('SELECT id FROM sites LIMIT 1')
+    const siteId = String(sites[0]?.id)
+    let constraintRejected = false
+    let errorMsg = ''
+    try {
+      await pool.query(
+        `INSERT INTO meters (id, site_id, label, status, created_at)
+         VALUES (UUID(), ?, 'H4-guard-meter', 'INVALID_STATUS_XYZ', UTC_TIMESTAMP(3))`,
+        [siteId],
+      )
+    } catch (err) {
+      constraintRejected = true
+      errorMsg = err instanceof Error ? err.message : String(err)
+    }
+    expect(constraintRejected).toBe(true)
+    // MySQL 8 returns: "Check constraint 'chk_meter_status' is violated."
+    expect(errorMsg).toMatch(/Check constraint.*is violated/i)
+  })
 })
 
 afterAll(async () => {

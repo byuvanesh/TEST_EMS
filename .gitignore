@@ -8,6 +8,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+!.env.test.example
 _ref_extract/
 frontend/node_modules/
 frontend/dist/
