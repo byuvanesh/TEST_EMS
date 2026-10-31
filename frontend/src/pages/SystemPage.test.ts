@@ -1,11 +1,16 @@
 /**
  * Step 6c tests: System mapping admin client-side VERIFIED evidence guard.
+ * Step 6e addition: GET /api/system/config — ApiClient.getSystemConfig() and
+ *                   ApiSystemConfigResponse contract.
  *
  * These tests verify that:
  * 1. verificationErrors() returns empty for UNVERIFIED (no fields required).
  * 2. verificationErrors() returns errors for VERIFIED with any missing field.
  * 3. All three fields filled → no errors (gate passes, backend call may proceed).
  * 4. ApiClient methods exist with correct shapes (compile-time contract).
+ * 5. getSystemConfig() exists, returns a Promise.
+ * 6. ApiSystemConfigResponse type only exposes local_server_url — never credentials.
+ * 7. Registration URL is constructed correctly from local_server_url.
  */
 
 import { describe, expect, it } from 'vitest'
@@ -88,7 +93,7 @@ describe('verificationErrors guard (migration 005 CHECK constraint)', () => {
 // API client method shape tests (compile-time contracts, no network)
 // ---------------------------------------------------------------------------
 
-import { ApiClient } from '@/api/client'
+import { ApiClient, type ApiSystemConfigResponse } from '@/api/client'
 
 describe('ApiClient system admin methods', () => {
   it('getSystemMapping returns a promise (method exists)', () => {
@@ -157,5 +162,54 @@ describe('ApiClient system admin methods', () => {
     expect(typeof client.getBridgeStatus).toBe('function')
     const result = client.getBridgeStatus().catch(() => null)
     expect(result).toBeInstanceOf(Promise)
+  })
+
+  it('getSystemConfig returns a promise (method exists)', () => {
+    const client = new ApiClient('http://localhost:9999')
+    expect(typeof client.getSystemConfig).toBe('function')
+    const result = client.getSystemConfig().catch(() => null)
+    expect(result).toBeInstanceOf(Promise)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// ApiSystemConfigResponse type-level contract tests
+// Verifies that the exported interface shape exposes only local_server_url
+// and that credential keys are absent from any compliant response object.
+// ---------------------------------------------------------------------------
+
+describe('ApiSystemConfigResponse contract', () => {
+  it('only exposes local_server_url — no credential keys present in a compliant object', () => {
+    const mockConfig: ApiSystemConfigResponse = {
+      local_server_url: 'http://127.0.0.1:3333',
+    }
+    expect(mockConfig.local_server_url).toBe('http://127.0.0.1:3333')
+
+    const asRecord = mockConfig as Record<string, unknown>
+    expect('LOCAL_SERVER_USER' in asRecord).toBe(false)
+    expect('LOCAL_SERVER_PASSWORD' in asRecord).toBe(false)
+    expect('GATEWAY_MAC' in asRecord).toBe(false)
+    expect('local_server_user' in asRecord).toBe(false)
+    expect('local_server_password' in asRecord).toBe(false)
+    expect('gateway_mac' in asRecord).toBe(false)
+  })
+
+  it('constructs the correct /devices registration URL from local_server_url', () => {
+    const config: ApiSystemConfigResponse = {
+      local_server_url: 'http://192.168.1.100:3333',
+    }
+    // Mirrors the expression used in LocalServerRegistrationCard
+    const registrationUrl = `${config.local_server_url}/devices`
+    expect(registrationUrl).toBe('http://192.168.1.100:3333/devices')
+  })
+
+  it('registration URL never contains credential strings', () => {
+    const config: ApiSystemConfigResponse = {
+      local_server_url: 'http://127.0.0.1:3333',
+    }
+    const registrationUrl = `${config.local_server_url}/devices`
+    expect(registrationUrl).not.toContain('password')
+    expect(registrationUrl).not.toContain('user')
+    expect(registrationUrl).not.toContain('mac')
   })
 })

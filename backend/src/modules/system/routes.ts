@@ -7,6 +7,7 @@ import { authenticate } from '../auth/middleware.js'
 import { badRequest, notFound } from '../../utils/errors.js'
 import { decodeMetric, type DecodeType, type WordOrder, type ByteOrder, type VerificationStatus } from '../../services/decoder.js'
 import { getActiveBridge } from '../../services/bridgeService.js'
+import { getEnv } from '../../config/env.js'
 
 const MappingItemSchema = z.object({
   metric: z.string().min(1, 'Metric identifier is required'),
@@ -430,4 +431,21 @@ export async function registerSystemRoutes(app: FastifyInstance): Promise<void> 
       meters,
     })
   })
+
+  // --------------------------------------------------------------------------
+  // GET /api/system/config — Public-safe system config (auth required)
+  // Returns ONLY local_server_url from env — never credentials.
+  // LOCAL_SERVER_USER, LOCAL_SERVER_PASSWORD, and GATEWAY_MAC are never
+  // returned by this endpoint, by design.
+  // --------------------------------------------------------------------------
+  app.get(
+    '/api/system/config',
+    { preHandler: [authenticate] },
+    async (_req, reply) => {
+      const env = getEnv()
+      return reply.status(200).send({
+        local_server_url: env.LOCAL_SERVER_URL,
+      })
+    },
+  )
 }

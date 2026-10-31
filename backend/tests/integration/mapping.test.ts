@@ -405,3 +405,52 @@ describe('Step 4 — System Mapping API (Phase 2b)', () => {
     expect(body.local_server_ts).toBe(ts)
   })
 })
+
+// ---------------------------------------------------------------------------
+// GET /api/system/config tests
+// CFG-01  Requires authentication
+// CFG-02  Returns local_server_url when authenticated
+// CFG-03  Never leaks credentials (LOCAL_SERVER_USER, LOCAL_SERVER_PASSWORD, GATEWAY_MAC)
+// ---------------------------------------------------------------------------
+
+describe('GET /api/system/config', () => {
+  it('CFG-01: returns 401 without a session cookie', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/system/config',
+    })
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('CFG-02: returns 200 with local_server_url when authenticated', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/system/config',
+      cookies: { ems_session: sessionCookie },
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json() as Record<string, unknown>
+    expect(typeof body.local_server_url).toBe('string')
+    // Should be a non-empty string (default or configured)
+    expect((body.local_server_url as string).length).toBeGreaterThan(0)
+  })
+
+  it('CFG-03: response body never contains credential fields', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/system/config',
+      cookies: { ems_session: sessionCookie },
+    })
+    expect(res.statusCode).toBe(200)
+    const body = res.json() as Record<string, unknown>
+
+    // Credential fields must be absent — not just falsy, but absent entirely
+    expect('LOCAL_SERVER_USER' in body).toBe(false)
+    expect('LOCAL_SERVER_PASSWORD' in body).toBe(false)
+    expect('GATEWAY_MAC' in body).toBe(false)
+    // Also check lowercased variants
+    expect('local_server_user' in body).toBe(false)
+    expect('local_server_password' in body).toBe(false)
+    expect('gateway_mac' in body).toBe(false)
+  })
+})

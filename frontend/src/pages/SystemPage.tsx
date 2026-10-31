@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  ExternalLink,
   FlaskConical,
   Radio,
   RefreshCw,
@@ -18,6 +19,7 @@ import {
   type ApiMappingItem,
   type ApiMeter,
   type ApiBridgeStatusResponse,
+  type ApiSystemConfigResponse,
   type ApiSystemGatewayResponse,
   type ApiSystemMappingResponse,
   type ApiTestMappingResponse,
@@ -968,6 +970,68 @@ function GatewayStatusCard({ gw }: { gw: ApiSystemGatewayResponse }) {
 }
 
 // ---------------------------------------------------------------------------
+// local_server Registration Convenience Card
+// ---------------------------------------------------------------------------
+
+/**
+ * Renders the LOCAL_SERVER_URL field and a button that opens
+ * `${local_server_url}/devices` in a new tab so the operator can register
+ * the gateway on local_server themselves.
+ *
+ * Design constraints:
+ * - This component never POSTs or fetches anything from local_server.
+ * - It is purely a navigation convenience: window.open / target="_blank".
+ * - No form fields for MAC or API key are submitted anywhere from here.
+ */
+function LocalServerRegistrationCard({ config }: { config: ApiSystemConfigResponse }) {
+  const registrationUrl = `${config.local_server_url}/devices`
+
+  return (
+    <Card>
+      <CardHeader
+        title="local_server — Gateway Registration"
+        subtitle="Convenience link only · TEST_EMS does not write to local_server"
+        action={<ExternalLink className="h-4 w-4 text-text-secondary" />}
+      />
+
+      {/* LOCAL_SERVER_URL labeled field */}
+      <div className="mb-4">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
+          LOCAL_SERVER_URL (from backend config)
+        </p>
+        <p
+          id="local-server-url-display"
+          className="rounded-md border border-border bg-surface px-3 py-2 font-mono text-xs text-text"
+        >
+          {config.local_server_url}
+        </p>
+      </div>
+
+      {/* Open local_server devices page */}
+      <a
+        id="btn-register-gateway-local-server"
+        href={registrationUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2 rounded-[8px] border border-border bg-card px-4 py-2 text-xs font-medium text-text transition-colors hover:bg-surface"
+      >
+        <ExternalLink className="h-3.5 w-3.5" />
+        Register gateway on local_server
+      </a>
+
+      {/* Instructions — plain text, no form interaction */}
+      <p className="mt-4 text-[11px] leading-relaxed text-text-secondary">
+        Log in with your local_server admin account, click{' '}
+        <span className="font-semibold text-text">Add device</span>, enter the
+        gateway MAC and a name, then copy the generated API key and URL into
+        the gateway firmware&apos;s{' '}
+        <span className="font-semibold text-text">Local server settings</span> page.
+      </p>
+    </Card>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main page
 // ---------------------------------------------------------------------------
 
@@ -1016,11 +1080,16 @@ export function SystemPage() {
     () => apiClient.getBridgeStatus(),
     [],
   )
+  const sysConfig = useFetch<ApiSystemConfigResponse>(
+    () => apiClient.getSystemConfig(),
+    [],
+  )
 
   const reload = () => {
     mapping.refresh()
     gateway.refresh()
     bridge.refresh()
+    sysConfig.refresh()
   }
 
   const overallLoading = mapping.loading || gateway.loading || bridge.loading
@@ -1073,6 +1142,17 @@ export function SystemPage() {
           </Card>
         )}
       </div>
+
+      {/* local_server registration convenience card */}
+      {sysConfig.data ? (
+        <LocalServerRegistrationCard config={sysConfig.data} />
+      ) : sysConfig.error ? (
+        <Card>
+          <p className="text-xs text-text-secondary">
+            local_server URL unavailable: {sysConfig.error}
+          </p>
+        </Card>
+      ) : null}
 
       {/* Mapping Test Tool */}
       {mapping.data && mapping.data.meters.length > 0 ? (

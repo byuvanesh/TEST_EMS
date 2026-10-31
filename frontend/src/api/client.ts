@@ -308,6 +308,15 @@ export interface ApiBridgeStatusResponse {
   metrics: ApiBridgeMetrics
 }
 
+/**
+ * Returned by GET /api/system/config.
+ * Contains ONLY the local_server_url — no credentials.
+ * LOCAL_SERVER_USER, LOCAL_SERVER_PASSWORD, and GATEWAY_MAC are never included.
+ */
+export interface ApiSystemConfigResponse {
+  local_server_url: string
+}
+
 export class ApiError extends Error {
   statusCode: number
   code: string
@@ -503,6 +512,15 @@ export class ApiClient {
 
   public async getBridgeStatus(): Promise<ApiBridgeStatusResponse> {
     return this.request<ApiBridgeStatusResponse>('/api/bridge/status')
+  }
+
+  /**
+   * GET /api/system/config — Returns only { local_server_url }.
+   * Never returns LOCAL_SERVER_USER, LOCAL_SERVER_PASSWORD, or GATEWAY_MAC.
+   * Requires authentication (session cookie + CSRF token present from login).
+   */
+  public async getSystemConfig(): Promise<ApiSystemConfigResponse> {
+    return this.request<ApiSystemConfigResponse>('/api/system/config')
   }
 }
 
