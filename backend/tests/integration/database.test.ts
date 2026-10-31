@@ -26,7 +26,7 @@ describe('database integration (MySQL 8)', () => {
   beforeAll(async () => {
     await runMigrations()
     await truncateCatalogue()
-    await seedCatalogue()
+    await seedCatalogue({ emptyMetersAndMappings: false })
   })
 
   it('AT-01: migrations are applied (schema_migrations has entries)', async () => {

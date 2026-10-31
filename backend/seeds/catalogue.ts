@@ -21,7 +21,15 @@ const LOADS = [
   },
 ] as const
 
-export async function seedCatalogue(): Promise<{ siteId: string; loadCodes: string[] }> {
+export interface SeedCatalogueOptions {
+  /** If true, seeds loads with no meters, slave IDs, or mappings (Phase 2b requirement). Default is true. */
+  emptyMetersAndMappings?: boolean
+}
+
+export async function seedCatalogue(
+  options: SeedCatalogueOptions = {},
+): Promise<{ siteId: string; loadCodes: string[] }> {
+  const { emptyMetersAndMappings = true } = options
   const pool = getMigratePool()
   const conn = await pool.getConnection()
 
@@ -83,38 +91,40 @@ export async function seedCatalogue(): Promise<{ siteId: string; loadCodes: stri
       )
     }
 
-    for (const load of loadRows) {
-      const loadId = String(load.id)
-      const code = String(load.code)
-      const [meterExisting] = await conn.query<RowDataPacket[]>(
-        `SELECT m.id
-         FROM meters m
-         INNER JOIN load_meter_assignments a ON a.meter_id = m.id AND a.valid_to IS NULL
-         WHERE a.load_id = ?
-         LIMIT 1`,
-        [loadId],
-      )
-      if (meterExisting[0]) continue
+    if (!emptyMetersAndMappings) {
+      for (const load of loadRows) {
+        const loadId = String(load.id)
+        const code = String(load.code)
+        const [meterExisting] = await conn.query<RowDataPacket[]>(
+          `SELECT m.id
+           FROM meters m
+           INNER JOIN load_meter_assignments a ON a.meter_id = m.id AND a.valid_to IS NULL
+           WHERE a.load_id = ?
+           LIMIT 1`,
+          [loadId],
+        )
+        if (meterExisting[0]) continue
 
-      const meterId = newId()
-      await conn.query(
-        `INSERT INTO meters
-          (id, site_id, label, manufacturer, model, serial_number,
-           modbus_slave_id, ct_primary_a, ct_secondary_a, wiring, register_map_ref,
-           capability_json, status, created_at)
-         VALUES (?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'planned', UTC_TIMESTAMP(3))`,
-        [meterId, siteId, `Meter placeholder for ${code}`],
-      )
-      await conn.query(
-        `INSERT INTO load_meter_assignments (id, load_id, meter_id, valid_from, valid_to)
-         VALUES (?, ?, ?, UTC_TIMESTAMP(3), NULL)`,
-        [newId(), loadId, meterId],
-      )
-      await conn.query(
-        `INSERT INTO gateway_meter_links (id, gateway_id, meter_id, bus_address_note, created_at)
-         VALUES (?, ?, ?, NULL, UTC_TIMESTAMP(3))`,
-        [newId(), gatewayId, meterId],
-      )
+        const meterId = newId()
+        await conn.query(
+          `INSERT INTO meters
+            (id, site_id, label, manufacturer, model, serial_number,
+             modbus_slave_id, ct_primary_a, ct_secondary_a, wiring, register_map_ref,
+             capability_json, status, created_at)
+           VALUES (?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'planned', UTC_TIMESTAMP(3))`,
+          [meterId, siteId, `Meter placeholder for ${code}`],
+        )
+        await conn.query(
+          `INSERT INTO load_meter_assignments (id, load_id, meter_id, valid_from, valid_to)
+           VALUES (?, ?, ?, UTC_TIMESTAMP(3), NULL)`,
+          [newId(), loadId, meterId],
+        )
+        await conn.query(
+          `INSERT INTO gateway_meter_links (id, gateway_id, meter_id, bus_address_note, created_at)
+           VALUES (?, ?, ?, NULL, UTC_TIMESTAMP(3))`,
+          [newId(), gatewayId, meterId],
+        )
+      }
     }
 
     return { siteId, loadCodes: LOADS.map((l) => l.code) }

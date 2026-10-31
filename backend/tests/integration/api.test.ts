@@ -33,7 +33,7 @@ describe('API integration (MySQL 8)', () => {
   beforeAll(async () => {
     await runMigrations()
     await truncateAll()
-    const seeded = await seedCatalogue()
+    const seeded = await seedCatalogue({ emptyMetersAndMappings: false })
     siteId = seeded.siteId
     const [loads] = await getMigratePool().query<RowDataPacket[]>(
       'SELECT id FROM loads WHERE site_id = ? ORDER BY sort_order LIMIT 1',
@@ -103,13 +103,19 @@ describe('API integration (MySQL 8)', () => {
        LIMIT 1`,
       [siteId, loadId],
     )
+    const demoMeterId = newId()
+    await pool.query(
+      `INSERT INTO meters (id, site_id, source_type, label, status, created_at)
+       VALUES (?, ?, 'DEMO', 'Demo Meter for AT-17', 'installed', UTC_TIMESTAMP(3))`,
+      [demoMeterId, siteId],
+    )
     await pool.query(
       `INSERT INTO telemetry_samples (
          site_id, gateway_id, meter_id, load_id, source_type, schema_version,
          sample_time, received_at, sequence, quality, active_power_kw
        ) VALUES (?, ?, ?, ?, 'DEMO', 'testems.telemetry.v1',
          UTC_TIMESTAMP(3), UTC_TIMESTAMP(3), 999001, 'UNKNOWN', 12.3456)`,
-      [siteId, String(meta[0]?.gateway_id), String(meta[0]?.meter_id), loadId],
+      [siteId, String(meta[0]?.gateway_id), demoMeterId, loadId],
     )
 
     const overview = await app.inject({
