@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise'
 import { getEnv } from '../config/env.js'
+import { assertTestDatabaseGuard } from './testGuard.js'
 
 export type DbPool = mysql.Pool
 
@@ -18,6 +19,7 @@ const baseOptions = {
 export function getAppPool(): DbPool {
   if (appPool) return appPool
   const env = getEnv()
+  assertTestDatabaseGuard(env.MYSQL_DATABASE)
   appPool = mysql.createPool({
     ...baseOptions,
     host: env.MYSQL_HOST,
@@ -32,6 +34,7 @@ export function getAppPool(): DbPool {
 export function getMigratePool(): DbPool {
   if (migratePool) return migratePool
   const env = getEnv()
+  assertTestDatabaseGuard(env.MYSQL_DATABASE)
   migratePool = mysql.createPool({
     ...baseOptions,
     host: env.MYSQL_HOST,
