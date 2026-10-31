@@ -411,6 +411,7 @@ export function buildEnergyCsv(result: EnergyAnalyticsResult): string {
 
   return [
     `# TEST_EMS DEMO DATA export — not live meter readings`,
+    `# DATA_SOURCE: DEMO`,
     `# Period: ${result.period.label}`,
     `# Units: energy_kwh (kWh), power (kW)`,
     `# ${ENERGY_METHOD_NOTE}`,
@@ -419,6 +420,60 @@ export function buildEnergyCsv(result: EnergyAnalyticsResult): string {
     header.join(','),
     ...rows,
   ].join('\n')
+}
+
+export function buildRealEnergyCsv(
+  energy: {
+    method: string
+    total_energy_kwh: number
+    availability: string
+    has_gaps: boolean
+    intervals: Array<{
+      start_time: string
+      end_time: string
+      start_kwh: number | null
+      end_kwh: number | null
+      energy_kwh: number | null
+      status: string
+      reason?: string
+    }>
+  },
+  loadFilter: string,
+): string {
+  const comments = [
+    '# TEST_EMS OPERATIONAL ENERGY EXPORT — REAL TELEMETRY',
+    '# DATA_SOURCE: REAL',
+    `# Method: ${energy.method}`,
+    `# Load filter: ${loadFilter}`,
+    `# Total Energy (kWh): ${energy.total_energy_kwh}`,
+    `# Availability: ${energy.availability}`,
+    `# Has Gaps: ${energy.has_gaps ? 'YES' : 'NO'}`,
+    `# Exported at: ${new Date().toISOString()}`,
+  ]
+
+  const header = [
+    'start_time',
+    'end_time',
+    'start_kwh',
+    'end_kwh',
+    'energy_kwh',
+    'status',
+    'gap_reason',
+  ]
+
+  const rows = energy.intervals.map((i) =>
+    [
+      i.start_time,
+      i.end_time,
+      i.start_kwh ?? '',
+      i.end_kwh ?? '',
+      i.energy_kwh !== null ? i.energy_kwh : '',
+      i.status,
+      i.reason ?? '',
+    ].join(','),
+  )
+
+  return [...comments, header.join(','), ...rows].join('\n')
 }
 
 export function downloadTextFile(filename: string, content: string): void {

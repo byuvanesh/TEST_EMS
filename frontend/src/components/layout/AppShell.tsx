@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import {
   Bell,
@@ -6,8 +6,11 @@ import {
   Settings2,
   Zap,
 } from 'lucide-react'
-import { FirstLoginPrompt } from '@/components/auth/FirstLoginPrompt'
+import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog'
 import { useAlarmStore } from '@/context/AlarmStore'
+import { useAuth } from '@/context/AuthContext'
+import { useDataSource } from '@/context/DataSourceContext'
+import { apiClient, type ApiOverviewResponse } from '@/api/client'
 import { buildOverviewData } from '@/mock/demoData'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
@@ -25,7 +28,47 @@ export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const { openAlarms, openCount } = useAlarmStore()
-  const overview = buildOverviewData(openAlarms)
+  const { mustChangePassword } = useAuth()
+  const { isDemo, isReal } = useDataSource()
+
+  const [realOverview, setRealOverview] = useState<ApiOverviewResponse | null>(null)
+
+  useEffect(() => {
+    if (!isReal) return
+
+    let cancelled = false
+    async function fetchRealSiteInfo() {
+      try {
+        const res = await apiClient.getOverview('REAL')
+        if (!cancelled) setRealOverview(res)
+      } catch {
+        if (!cancelled) setRealOverview(null)
+      }
+    }
+
+    fetchRealSiteInfo()
+    const timer = setInterval(fetchRealSiteInfo, 10000)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [isReal])
+
+  const demoOverview = buildOverviewData(openAlarms)
+
+  const siteName = isReal
+    ? realOverview?.site?.name ?? 'Site 01 · Test Facility'
+    : demoOverview.site.name
+
+  const timezoneLabel = isReal
+    ? realOverview?.site?.timezone ?? 'Asia/Kolkata'
+    : demoOverview.site.timezoneLabel
+
+  const dataState = isReal
+    ? realOverview?.data_state ?? 'NO_DATA'
+    : demoOverview.globalDataState
+
+  const asOf = isReal ? realOverview?.as_of ?? null : demoOverview.generatedAt
 
   return (
     <div className="min-h-screen bg-bg">
@@ -43,20 +86,18 @@ export function AppShell() {
         )}
       >
         <Header
-          siteName={overview.site.name}
-          timezoneLabel={overview.site.timezoneLabel}
-          clockIso={overview.generatedAt}
-          dataState={overview.globalDataState}
-          activeAlarmCount={openCount}
+          siteName={siteName}
+          timezoneLabel={timezoneLabel}
+          clockIso={demoOverview.generatedAt}
+          asOf={asOf}
+          dataState={dataState}
+          activeAlarmCount={isDemo ? openCount : 0}
           onMenuClick={() => setMobileOpen(true)}
           changePasswordOpen={changePasswordOpen}
           onChangePasswordOpenChange={setChangePasswordOpen}
         />
 
         <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-5 pb-20 md:px-6 md:pb-5">
-          <FirstLoginPrompt
-            onOpenChangePassword={() => setChangePasswordOpen(true)}
-          />
           <Outlet />
         </main>
 
@@ -79,6 +120,15 @@ export function AppShell() {
           ))}
         </nav>
       </div>
+
+      {/* Forced password change dialog if mustChangePassword is true */}
+      {mustChangePassword ? (
+        <ChangePasswordDialog
+          open={true}
+          forced={true}
+          onSuccess={() => {}}
+        />
+      ) : null}
     </div>
   )
 }

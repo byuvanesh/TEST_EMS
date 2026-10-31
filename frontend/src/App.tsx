@@ -1,13 +1,16 @@
 import { AppRouter } from '@/app/router'
 import { AlarmProvider } from '@/context/AlarmStore'
-import { DemoAuthProvider } from '@/context/DemoAuthStore'
+import { AuthProvider } from '@/context/AuthContext'
+import { DataSourceProvider } from '@/context/DataSourceContext'
 
 export default function App() {
   return (
-    <DemoAuthProvider>
-      <AlarmProvider>
-        <AppRouter />
-      </AlarmProvider>
-    </DemoAuthProvider>
+    <AuthProvider>
+      <DataSourceProvider initialSource="REAL">
+        <AlarmProvider>
+          <AppRouter />
+        </AlarmProvider>
+      </DataSourceProvider>
+    </AuthProvider>
   )
 }

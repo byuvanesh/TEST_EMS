@@ -124,6 +124,58 @@ export function resolvePeriodBounds(input: ResolvePeriodInput): PeriodBounds | n
 export function previousPeriodBounds(current: PeriodBounds): PeriodBounds {
   const start = parseIstWall(current.start)
   const end = parseIstWall(current.end)
+
+  if (current.preset === 'today') {
+    const prevStart = addDays(start, -1)
+    const prevEnd = addDays(end, -1)
+    return {
+      preset: 'today',
+      start: toIstIso(prevStart),
+      end: toIstIso(prevEnd),
+      label: `Yesterday (same elapsed window) · ${formatDay(prevStart)}`,
+    }
+  }
+
+  if (current.preset === 'yesterday') {
+    const prevStart = addDays(start, -1)
+    const prevEnd = addDays(end, -1)
+    return {
+      preset: 'yesterday',
+      start: toIstIso(prevStart),
+      end: toIstIso(prevEnd),
+      label: `Day before yesterday · ${formatDay(prevStart)}`,
+    }
+  }
+
+  if (current.preset === '7d') {
+    const prevStart = addDays(start, -7)
+    const prevEnd = addDays(end, -7)
+    return {
+      preset: '7d',
+      start: toIstIso(prevStart),
+      end: toIstIso(prevEnd),
+      label: `Prior 7 days (same elapsed window)`,
+    }
+  }
+
+  if (current.preset === 'month') {
+    const prevStart = new Date(start.getFullYear(), start.getMonth() - 1, 1, 0, 0, 0)
+    const prevEnd = new Date(
+      start.getFullYear(),
+      start.getMonth() - 1,
+      end.getDate(),
+      end.getHours(),
+      end.getMinutes(),
+      end.getSeconds(),
+    )
+    return {
+      preset: 'month',
+      start: toIstIso(prevStart),
+      end: toIstIso(prevEnd),
+      label: `Prior month (same elapsed window)`,
+    }
+  }
+
   const durationMs = end.getTime() - start.getTime()
   const prevEnd = new Date(start.getTime() - 1000)
   const prevStart = new Date(prevEnd.getTime() - durationMs)

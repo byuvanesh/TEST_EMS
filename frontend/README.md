@@ -1,6 +1,6 @@
 # TEST_EMS Frontend
 
-Phase 0 React application for the TEST_EMS industrial energy dashboard.
+React application for the TEST_EMS industrial energy dashboard.
 
 ## Commands
 
@@ -13,23 +13,22 @@ npm test
 npm run typecheck
 ```
 
-## Demo sign-in
+## Authentication
 
-Client-side navigation gate only — **not** production auth.
+Server-side session authentication with HttpOnly cookies, CSRF tokens, and rate limiting.
 
-1. Copy `.env.example` to `.env.local` and set `VITE_DEMO_USERNAME` / `VITE_DEMO_PASSWORD`.
-2. Restart Vite.
-3. Open `/login`.
-
-`VITE_*` values are embedded in the browser bundle and are **not secrets**.
-See [docs/DEMO_AUTH.md](docs/DEMO_AUTH.md).
+1. Start backend server at `http://127.0.0.1:3001`.
+2. Start frontend dev server (`npm run dev`).
+3. Open `http://localhost:5173/login`.
+4. Sign in with backend admin credentials. Initial admin login requires a forced password change before accessing telemetry.
 
 ## Source map
 
-- `src/pages` — route screens (includes `LoginPage`)
-- `src/components/layout` — shell
-- `src/components/auth` — demo login gate / change-password UI
+- `src/api` — typed API client with CSRF protection and null safety
+- `src/pages` — route screens (`OverviewPage`, `LoadDetailPage`, `LoginPage`, etc.)
+- `src/components/layout` — shell, sidebar, and header with measurement time and DataSource toggle
+- `src/components/auth` — authentication gate and forced change-password dialog
 - `src/components/ui` — design system
-- `src/context` — AlarmStore + DemoAuthStore (in-memory)
-- `src/mock` — **DEMO DATA only**
+- `src/context` — `AuthContext` (real sessions), `DataSourceContext` (REAL vs DEMO), `AlarmStore`
+- `src/mock` — canonical DEMO data series (strictly isolated from REAL mode)
 - `src/types` — shared TypeScript types

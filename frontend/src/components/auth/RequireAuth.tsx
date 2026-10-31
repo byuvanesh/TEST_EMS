@@ -1,14 +1,23 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { useDemoAuth } from '@/context/DemoAuthStore'
-import { resolveAuthNavigation } from '@/lib/demoAuthLogic'
+import { useAuth } from '@/context/AuthContext'
 
-/** Client-side route gate only — not real security. */
+/** Server-authenticated route gate — redirects to /login if unauthenticated. */
 export function RequireAuth() {
-  const { isSignedIn } = useDemoAuth()
+  const { isSignedIn, isLoading } = useAuth()
   const location = useLocation()
-  const decision = resolveAuthNavigation(location.pathname, isSignedIn)
 
-  if (decision === 'to_login') {
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-bg">
+        <div className="flex items-center gap-2 text-sm text-text-secondary">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          <span>Verifying session…</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isSignedIn) {
     return (
       <Navigate to="/login" replace state={{ from: location.pathname }} />
     )
@@ -17,13 +26,15 @@ export function RequireAuth() {
   return <Outlet />
 }
 
-/** Redirect signed-in users away from /login. */
+/** Redirect signed-in users away from /login to the dashboard. */
 export function PublicOnly() {
-  const { isSignedIn } = useDemoAuth()
-  const location = useLocation()
-  const decision = resolveAuthNavigation(location.pathname, isSignedIn)
+  const { isSignedIn, isLoading } = useAuth()
 
-  if (decision === 'to_overview') {
+  if (isLoading) {
+    return null
+  }
+
+  if (isSignedIn) {
     return <Navigate to="/" replace />
   }
 

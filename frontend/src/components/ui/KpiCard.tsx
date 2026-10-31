@@ -25,7 +25,7 @@ export function KpiCard({ kpi }: KpiCardProps) {
       <div className="mt-3">
         <p className="tabular text-[28px] font-semibold leading-none tracking-tight text-text">
           {display}
-          {kpi.unit ? (
+          {kpi.unit && kpi.value !== null ? (
             <span className="ml-1.5 text-sm font-medium text-text-secondary">
               {kpi.unit}
             </span>

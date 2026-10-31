@@ -6,6 +6,9 @@ const STYLES: Record<DataQualityState, string> = {
   STALE: 'bg-warning/10 text-warning-text border-warning/25',
   OFFLINE: 'bg-critical/10 text-critical border-critical/20',
   DEMO: 'bg-surface text-text-secondary border-border',
+  NO_DATA: 'bg-surface text-text-secondary border-border',
+  UNKNOWN: 'bg-surface text-text-secondary border-border',
+  UNVERIFIED: 'bg-amber-500/10 text-amber-600 border-amber-500/25',
 }
 
 interface StatusBadgeProps {

@@ -3,8 +3,14 @@
  * Mock data and future API responses should both map to these shapes.
  */
 
-/** Explicit data-quality states. Real telemetry must never be mixed with DEMO. */
-export type DataQualityState = 'LIVE' | 'STALE' | 'OFFLINE' | 'DEMO'
+export type DataQualityState =
+  | 'LIVE'
+  | 'STALE'
+  | 'OFFLINE'
+  | 'DEMO'
+  | 'NO_DATA'
+  | 'UNKNOWN'
+  | 'UNVERIFIED'
 
 export type AlarmSeverity = 'critical' | 'warning' | 'info'
 

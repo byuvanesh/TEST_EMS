@@ -14,6 +14,28 @@ interface LoadCardProps {
 export function LoadCard({ reading }: LoadCardProps) {
   const def = getLoadDefinition(reading.loadId)
 
+  const kwDisplay =
+    reading.activePowerKw !== null
+      ? formatNumber(reading.activePowerKw, 1)
+      : '—'
+
+  const currentDisplay =
+    reading.currentA !== null
+      ? `${formatNumber(reading.currentA, 1)} A`
+      : '—'
+
+  const voltageDisplay =
+    reading.voltageV !== null
+      ? `${formatNumber(reading.voltageV, 0)} V`
+      : '—'
+
+  const pfDisplay = formatPowerFactor(reading.powerFactor)
+
+  const energyDisplay =
+    reading.energyTodayKwh !== null
+      ? `${formatNumber(reading.energyTodayKwh, 1)} kWh`
+      : '—'
+
   return (
     <Card className="flex flex-col">
       <div className="flex items-start justify-between gap-2">
@@ -34,18 +56,17 @@ export function LoadCard({ reading }: LoadCardProps) {
       </div>
 
       <p className="tabular mt-4 text-[28px] font-semibold leading-none text-text">
-        {formatNumber(reading.activePowerKw, 1)}
-        <span className="ml-1.5 text-sm font-medium text-text-secondary">kW</span>
+        {kwDisplay}
+        {reading.activePowerKw !== null ? (
+          <span className="ml-1.5 text-sm font-medium text-text-secondary">kW</span>
+        ) : null}
       </p>
 
       <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-        <Metric label="Current" value={`${formatNumber(reading.currentA, 1)} A`} />
-        <Metric label="Voltage" value={`${formatNumber(reading.voltageV, 0)} V`} />
-        <Metric label="PF" value={formatPowerFactor(reading.powerFactor)} />
-        <Metric
-          label="Energy today"
-          value={`${formatNumber(reading.energyTodayKwh, 1)} kWh`}
-        />
+        <Metric label="Current" value={currentDisplay} />
+        <Metric label="Voltage" value={voltageDisplay} />
+        <Metric label="PF" value={pfDisplay} />
+        <Metric label="Energy today" value={energyDisplay} />
       </dl>
 
       <div className="mt-4 flex items-center justify-between border-t border-border pt-3">

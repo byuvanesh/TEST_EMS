@@ -1,7 +1,8 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Activity, Eye, EyeOff, Lock, User } from 'lucide-react'
-import { useDemoAuth } from '@/context/DemoAuthStore'
+import { useAuth } from '@/context/AuthContext'
+import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog'
 
 function BrandVisual() {
   return (
@@ -93,7 +94,7 @@ function BrandVisual() {
 }
 
 export function LoginPage() {
-  const { state, signIn } = useDemoAuth()
+  const { login } = useAuth()
   const navigate = useNavigate()
   const formId = useId()
   const [username, setUsername] = useState('')
@@ -101,32 +102,28 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [forcePasswordChangeOpen, setForcePasswordChangeOpen] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
 
-    if (!state.configured) {
-      setError(
-        `Demo credentials are not configured. Set ${state.missingEnv.join(' and ')} in a local .env file (see .env.example). Vite env values are embedded in the browser bundle and are NOT secrets.`,
-      )
+    if (!username.trim() || !password) {
+      setError('Please enter both username and password.')
       return
     }
 
     setLoading(true)
-    // Brief delay so the loading state is visible; still client-only demo UX.
-    await new Promise((r) => setTimeout(r, 280))
-    const result = signIn(username, password)
+    const result = await login(username.trim(), password)
     setLoading(false)
 
     if (!result.ok) {
-      if (result.reason === 'not_configured') {
-        setError(
-          'Demo credentials are not configured. Add VITE_DEMO_USERNAME and VITE_DEMO_PASSWORD to a local ignored env file.',
-        )
-      } else {
-        setError('Invalid username or password.')
-      }
+      setError(result.error || 'Invalid username or password.')
+      return
+    }
+
+    if (result.mustChangePassword) {
+      setForcePasswordChangeOpen(true)
       return
     }
 
@@ -137,97 +134,78 @@ export function LoginPage() {
     'h-11 w-full rounded-[8px] border border-border bg-white py-2.5 pr-3 text-sm text-text outline-none transition-colors placeholder:text-text-secondary/60 hover:border-accent/40 focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:opacity-60'
 
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[minmax(260px,5fr)_minmax(320px,6fr)] lg:grid-cols-2">
-      {/* Left — brand / visual identity (tablet + desktop) */}
-      <aside className="relative hidden overflow-hidden bg-[#0a1628] text-white md:flex md:min-h-screen md:flex-col md:px-8 md:py-10 lg:px-12 lg:py-12 xl:px-16">
-        <BrandVisual />
+    <>
+      <div className="min-h-screen md:grid md:grid-cols-[minmax(260px,5fr)_minmax(320px,6fr)] lg:grid-cols-2">
+        {/* Left — brand / visual identity (tablet + desktop) */}
+        <aside className="relative hidden overflow-hidden bg-[#0a1628] text-white md:flex md:min-h-screen md:flex-col md:px-8 md:py-10 lg:px-12 lg:py-12 xl:px-16">
+          <BrandVisual />
 
-        <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-accent shadow-[0_0_24px_rgba(37,99,235,0.45)]">
-              <Activity className="h-5 w-5 text-white" aria-hidden />
-            </div>
-            <div>
-              <p className="text-lg font-semibold tracking-tight">TEST_EMS</p>
-              <p className="text-sm text-blue-200/80">Energy Management System</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative z-10 flex flex-1 flex-col justify-center py-8 lg:py-10">
-          <div className="max-w-md">
-            <p className="text-2xl font-semibold tracking-tight text-white lg:text-3xl xl:text-4xl">
-              Monitor. Analyze. Optimize.
-            </p>
-            <p className="mt-4 text-sm leading-relaxed text-blue-100/70">
-              Industrial-grade visibility into facility energy use — built for
-              operators who need clarity, not clutter.
-            </p>
-          </div>
-        </div>
-
-        <p className="relative z-10 text-xs text-blue-200/50">
-          Electrical monitoring only.
-        </p>
-      </aside>
-
-      {/* Right — login form */}
-      <main className="relative flex min-h-screen flex-col bg-[#f7f9fc]">
-        {/* Mobile compact brand header */}
-        <div className="relative overflow-hidden bg-[#0a1628] px-5 py-6 text-white md:hidden">
-          <div
-            className="pointer-events-none absolute inset-0 opacity-40"
-            aria-hidden
-          >
-            <div className="absolute -top-16 right-0 h-40 w-40 rounded-full bg-accent/40 blur-3xl" />
-            <div className="absolute bottom-0 left-8 h-24 w-24 rounded-full bg-blue-400/20 blur-2xl" />
-          </div>
-          <div className="relative z-10 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-accent">
-              <Activity className="h-5 w-5 text-white" aria-hidden />
-            </div>
-            <div>
-              <p className="text-base font-semibold tracking-tight">TEST_EMS</p>
-              <p className="text-xs text-blue-200/80">Energy Management System</p>
+          <div className="relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-accent shadow-[0_0_24px_rgba(37,99,235,0.45)]">
+                <Activity className="h-5 w-5 text-white" aria-hidden />
+              </div>
+              <div>
+                <p className="text-lg font-semibold tracking-tight">TEST_EMS</p>
+                <p className="text-sm text-blue-200/80">Energy Management System</p>
+              </div>
             </div>
           </div>
-          <p className="relative z-10 mt-4 text-sm font-medium text-blue-100/90">
-            Monitor. Analyze. Optimize.
-          </p>
-        </div>
 
-        <div className="flex flex-1 items-center justify-center px-5 py-8 sm:px-8 md:px-8 lg:px-12">
-          <div className="w-full max-w-[400px]">
-            <div className="mb-7">
-              <h1 className="text-2xl font-semibold tracking-tight text-text">
-                Welcome Back
-              </h1>
-              <p className="mt-1.5 text-sm text-text-secondary">
-                Sign in to access your energy dashboard.
+          <div className="relative z-10 flex flex-1 flex-col justify-center py-8 lg:py-10">
+            <div className="max-w-md">
+              <p className="text-2xl font-semibold tracking-tight text-white lg:text-3xl xl:text-4xl">
+                Monitor. Analyze. Optimize.
+              </p>
+              <p className="mt-4 text-sm leading-relaxed text-blue-100/70">
+                Industrial-grade visibility into facility energy use — built for
+                operators who need clarity, not clutter.
               </p>
             </div>
+          </div>
 
-            <div className="rounded-[12px] border border-border bg-card p-6 shadow-[0_4px_24px_rgba(23,32,51,0.06)] sm:p-7">
-              {!state.configured ? (
-                <div className="space-y-3" role="alert">
-                  <p className="text-sm font-semibold text-text">
-                    Demo credentials not configured
-                  </p>
-                  <p className="text-xs leading-relaxed text-text-secondary">
-                    Copy{' '}
-                    <code className="rounded bg-surface px-1">.env.example</code>{' '}
-                    to{' '}
-                    <code className="rounded bg-surface px-1">.env.local</code>,
-                    set the placeholder variables, then restart the Vite dev
-                    server. Missing:{' '}
-                    {state.missingEnv.join(', ') || 'unknown'}.
-                  </p>
-                  <p className="text-[11px] text-text-secondary">
-                    Do not commit real-looking credentials. This mechanism must
-                    never be used for production authentication.
-                  </p>
-                </div>
-              ) : (
+          <p className="relative z-10 text-xs text-blue-200/50">
+            Electrical monitoring only.
+          </p>
+        </aside>
+
+        {/* Right — login form */}
+        <main className="relative flex min-h-screen flex-col bg-[#f7f9fc]">
+          {/* Mobile compact brand header */}
+          <div className="relative overflow-hidden bg-[#0a1628] px-5 py-6 text-white md:hidden">
+            <div
+              className="pointer-events-none absolute inset-0 opacity-40"
+              aria-hidden
+            >
+              <div className="absolute -top-16 right-0 h-40 w-40 rounded-full bg-accent/40 blur-3xl" />
+              <div className="absolute bottom-0 left-8 h-24 w-24 rounded-full bg-blue-400/20 blur-2xl" />
+            </div>
+            <div className="relative z-10 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-accent">
+                <Activity className="h-5 w-5 text-white" aria-hidden />
+              </div>
+              <div>
+                <p className="text-base font-semibold tracking-tight">TEST_EMS</p>
+                <p className="text-xs text-blue-200/80">Energy Management System</p>
+              </div>
+            </div>
+            <p className="relative z-10 mt-4 text-sm font-medium text-blue-100/90">
+              Monitor. Analyze. Optimize.
+            </p>
+          </div>
+
+          <div className="flex flex-1 items-center justify-center px-5 py-8 sm:px-8 md:px-8 lg:px-12">
+            <div className="w-full max-w-[400px]">
+              <div className="mb-7">
+                <h1 className="text-2xl font-semibold tracking-tight text-text">
+                  Welcome Back
+                </h1>
+                <p className="mt-1.5 text-sm text-text-secondary">
+                  Sign in to access your energy dashboard.
+                </p>
+              </div>
+
+              <div className="rounded-[12px] border border-border bg-card p-6 shadow-[0_4px_24px_rgba(23,32,51,0.06)] sm:p-7">
                 <form className="space-y-5" onSubmit={handleSubmit} noValidate>
                   <div>
                     <label
@@ -321,15 +299,24 @@ export function LoginPage() {
                     )}
                   </button>
                 </form>
-              )}
-            </div>
+              </div>
 
-            <p className="mt-6 text-center text-[11px] text-text-secondary md:hidden">
-              Electrical monitoring only.
-            </p>
+              <p className="mt-6 text-center text-[11px] text-text-secondary md:hidden">
+                Electrical monitoring only.
+              </p>
+            </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+
+      <ChangePasswordDialog
+        open={forcePasswordChangeOpen}
+        forced={true}
+        onSuccess={() => {
+          setForcePasswordChangeOpen(false)
+          navigate('/', { replace: true })
+        }}
+      />
+    </>
   )
 }

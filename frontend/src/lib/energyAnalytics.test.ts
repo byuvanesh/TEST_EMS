@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   buildEnergyAnalytics,
   buildEnergyCsv,
+  buildRealEnergyCsv,
   demoPowerKw,
   resolveIncludedLoads,
 } from '@/lib/energyAnalytics'
-import { resolvePeriodBounds } from '@/lib/period'
-import { parseIstWall } from '@/lib/period'
+import { parseIstWall, previousPeriodBounds, resolvePeriodBounds } from '@/lib/period'
 
 describe('resolveIncludedLoads', () => {
   it('returns all loads for all filter', () => {
@@ -108,5 +108,58 @@ describe('buildEnergyAnalytics', () => {
       ),
     )
     expect(hasNull).toBe(true)
+  })
+
+  it('uses the exact same elapsed time-of-day window for today vs yesterday comparison', () => {
+    const todayBounds = resolvePeriodBounds({ preset: 'today' })!
+    expect(todayBounds.start).toContain('T00:00:00+05:30')
+    expect(todayBounds.end).toContain('T11:45:00+05:30')
+
+    const prevBounds = previousPeriodBounds(todayBounds)
+    expect(prevBounds.start).toContain('T00:00:00+05:30')
+    expect(prevBounds.end).toContain('T11:45:00+05:30')
+    // Start date is 1 day prior
+    expect(prevBounds.start.slice(0, 10)).not.toEqual(todayBounds.start.slice(0, 10))
+  })
+
+  it('exports REAL energy CSV with correct DATA_SOURCE header and GAP interval annotations', () => {
+    const realCsv = buildRealEnergyCsv(
+      {
+        method: 'counter-delta',
+        total_energy_kwh: 45.67,
+        availability: 'AVAILABLE',
+        has_gaps: true,
+        intervals: [
+          {
+            start_time: '2026-10-31T10:00:00+05:30',
+            end_time: '2026-10-31T10:15:00+05:30',
+            start_kwh: 100.0,
+            end_kwh: 110.5,
+            energy_kwh: 10.5,
+            status: 'OK',
+          },
+          {
+            start_time: '2026-10-31T10:15:00+05:30',
+            end_time: '2026-10-31T10:30:00+05:30',
+            start_kwh: 110.5,
+            end_kwh: 5.0,
+            energy_kwh: null,
+            status: 'GAP',
+            reason: 'COUNTER_ROLLOVER_OR_RESET',
+          },
+        ],
+      },
+      'all',
+    )
+
+    expect(realCsv).toContain('# DATA_SOURCE: REAL')
+    expect(realCsv).toContain('# Has Gaps: YES')
+    expect(realCsv).toContain('COUNTER_ROLLOVER_OR_RESET')
+    // GAP interval must have empty energy_kwh, never '0'
+    const lines = realCsv.split('\n')
+    const gapLine = lines.find((l) => l.includes('GAP'))
+    expect(gapLine).toBeDefined()
+    expect(gapLine).toContain(',GAP,COUNTER_ROLLOVER_OR_RESET')
+    expect(gapLine).not.toContain(',0,GAP')
   })
 })

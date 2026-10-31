@@ -8,20 +8,26 @@ interface DataStateBannerProps {
 }
 
 export function DataStateBanner({ state, message }: DataStateBannerProps) {
-  if (state !== 'DEMO' && state !== 'STALE' && state !== 'OFFLINE') {
+  if (state === 'LIVE') {
     return null
   }
 
-  const defaults: Record<'DEMO' | 'STALE' | 'OFFLINE', string> = {
+  const defaults: Partial<Record<DataQualityState, string>> = {
     DEMO: 'All values on this screen are DEMO DATA for UI development. They are not live meter readings and must not be used for operational decisions.',
     STALE: 'One or more data sources are stale. Totals may under-report until freshness is restored.',
     OFFLINE: 'Telemetry is offline. Last known values may be shown as unavailable.',
+    NO_DATA: 'No telemetry samples recorded yet. Waiting for live meter samples from the gateway.',
+    UNVERIFIED: 'Meter mapping is unverified. Samples will remain unavailable until mapping is verified.',
+    UNKNOWN: 'Operational data source active.',
   }
 
-  const styles: Record<'DEMO' | 'STALE' | 'OFFLINE', string> = {
-    DEMO: 'border-border bg-surface text-text',
+  const styles: Partial<Record<DataQualityState, string>> = {
+    DEMO: 'border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200',
     STALE: 'border-warning/30 bg-warning/10 text-warning-text',
     OFFLINE: 'border-critical/30 bg-critical/10 text-critical',
+    NO_DATA: 'border-border bg-surface text-text-secondary',
+    UNVERIFIED: 'border-warning/30 bg-warning/10 text-warning-text',
+    UNKNOWN: 'border-border bg-surface text-text',
   }
 
   return (
