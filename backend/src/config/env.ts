@@ -3,9 +3,18 @@ import { z } from 'zod'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import fs from 'node:fs'
+
 const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-// override:true so a parent-shell MYSQL_* from another project cannot shadow .env
-loadDotenv({ path: path.join(backendRoot, '.env'), override: true })
+const isTestMode = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true'
+const testEnvPath = path.join(backendRoot, '.env.test')
+
+if (isTestMode && fs.existsSync(testEnvPath)) {
+  loadDotenv({ path: testEnvPath, override: true })
+} else {
+  // override:true so a parent-shell MYSQL_* from another project cannot shadow .env
+  loadDotenv({ path: path.join(backendRoot, '.env'), override: true })
+}
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -21,6 +30,17 @@ const EnvSchema = z.object({
   MYSQL_MIGRATE_PASSWORD: z.string().min(1),
   BODY_LIMIT_BYTES: z.coerce.number().int().positive().default(1_048_576),
   LOG_LEVEL: z.string().default('info'),
+  BRIDGE_ENABLED: z
+    .preprocess((val) => val === 'true' || val === true, z.boolean())
+    .default(false),
+  LOCAL_SERVER_URL: z.string().default('http://127.0.0.1:3333'),
+  LOCAL_SERVER_USER: z.string().default(''),
+  LOCAL_SERVER_PASSWORD: z.string().default(''),
+  GATEWAY_MAC: z.string().default(''),
+  LOCAL_SERVER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(2000),
+  LOCAL_SERVER_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+  LOCAL_SERVER_MAX_PAYLOAD_BYTES: z.coerce.number().int().positive().default(262144),
+  STALE_THRESHOLD_SECONDS: z.coerce.number().int().positive().default(60),
 })
 
 export type AppEnv = z.infer<typeof EnvSchema>
