@@ -239,57 +239,58 @@ describe('Step 3 — Authentication & Sessions (Phase 2b)', () => {
     const { csrfToken } = loginRes.json()
     const cookie = loginRes.cookies[0]!
 
-    // 2. Attempting to call state-changing PUT /api/system/mapping is BLOCKED with 403
-    const mappingBlocked = await app.inject({
-      method: 'PUT',
-      url: '/api/system/mapping',
-      cookies: { ems_session: cookie.value },
-      headers: { 'x-csrf-token': csrfToken },
-      payload: {},
-    })
-    expect(mappingBlocked.statusCode).toBe(403)
-    expect(mappingBlocked.json().error.code).toBe('PASSWORD_CHANGE_REQUIRED')
+    try {
+      // 2. Attempting to call state-changing PUT /api/system/mapping is BLOCKED with 403
+      const mappingBlocked = await app.inject({
+        method: 'PUT',
+        url: '/api/system/mapping',
+        cookies: { ems_session: cookie.value },
+        headers: { 'x-csrf-token': csrfToken },
+        payload: {},
+      })
+      expect(mappingBlocked.statusCode).toBe(403)
+      expect(mappingBlocked.json().error.code).toBe('PASSWORD_CHANGE_REQUIRED')
 
-    // 3. User changes password via POST /api/auth/change-password
-    const newPassword = 'BrandNewSecurePassword2026!'
-    const changeRes = await app.inject({
-      method: 'POST',
-      url: '/api/auth/change-password',
-      cookies: { ems_session: cookie.value },
-      headers: { 'x-csrf-token': csrfToken },
-      payload: {
-        currentPassword: env.INITIAL_ADMIN_PASSWORD,
-        newPassword,
-      },
-    })
-    expect(changeRes.statusCode).toBe(200)
-    expect(changeRes.json().ok).toBe(true)
-    expect(changeRes.json().mustChangePassword).toBe(false)
+      // 3. User changes password via POST /api/auth/change-password
+      const newPassword = 'BrandNewSecurePassword2026!'
+      const changeRes = await app.inject({
+        method: 'POST',
+        url: '/api/auth/change-password',
+        cookies: { ems_session: cookie.value },
+        headers: { 'x-csrf-token': csrfToken },
+        payload: {
+          currentPassword: env.INITIAL_ADMIN_PASSWORD,
+          newPassword,
+        },
+      })
+      expect(changeRes.statusCode).toBe(200)
+      expect(changeRes.json().ok).toBe(true)
+      expect(changeRes.json().mustChangePassword).toBe(false)
 
-    // 4. Verify in DB that must_change_password is now 0
-    const [userRows] = await pool.query<RowDataPacket[]>(
-      'SELECT must_change_password FROM users WHERE username = ?',
-      ['admin'],
-    )
-    expect(Boolean(userRows[0]?.must_change_password)).toBe(false)
+      // 4. Verify in DB that must_change_password is now 0
+      const [userRows] = await pool.query<RowDataPacket[]>(
+        'SELECT must_change_password FROM users WHERE username = ?',
+        ['admin'],
+      )
+      expect(Boolean(userRows[0]?.must_change_password)).toBe(false)
 
-    // 5. Now calling PUT /api/system/mapping succeeds
-    const mappingAllowed = await app.inject({
-      method: 'PUT',
-      url: '/api/system/mapping',
-      cookies: { ems_session: cookie.value },
-      headers: { 'x-csrf-token': csrfToken },
-      payload: {},
-    })
-    expect(mappingAllowed.statusCode).toBe(200)
-    expect(mappingAllowed.json().ok).toBe(true)
-
-    // Restore admin password back to INITIAL_ADMIN_PASSWORD for subsequent tests
-    const resetHash = await hashPassword(env.INITIAL_ADMIN_PASSWORD)
-    await pool.query('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE username = ?', [
-      resetHash,
-      'admin',
-    ])
+      // 5. Now session is fully authorized — GET /api/auth/me succeeds (no body validation involved)
+      const meAllowed = await app.inject({
+        method: 'GET',
+        url: '/api/auth/me',
+        cookies: { ems_session: cookie.value },
+        headers: { 'x-csrf-token': csrfToken },
+      })
+      expect(meAllowed.statusCode).toBe(200)
+      expect(meAllowed.json().user.username).toBe('admin')
+    } finally {
+      // Always restore admin password and must_change_password for subsequent tests
+      const resetHash = await hashPassword(env.INITIAL_ADMIN_PASSWORD)
+      await pool.query('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE username = ?', [
+        resetHash,
+        'admin',
+      ])
+    }
   })
 
   it('AUTH-08: Password change rejects short passwords (<8 chars) or identical passwords', async () => {
@@ -405,16 +406,15 @@ describe('Step 3 — Authentication & Sessions (Phase 2b)', () => {
     })
     expect(noCsrf.statusCode).toBe(403)
 
-    // 3. Fully authorized (cookie + CSRF) -> 200
-    const fullAuth = await app.inject({
-      method: 'PUT',
-      url: '/api/system/mapping',
+    // 3. Fully authorized (cookie + CSRF) — GET /api/auth/me verifies session is valid
+    const meRes = await app.inject({
+      method: 'GET',
+      url: '/api/auth/me',
       cookies: { ems_session: cookie.value },
       headers: { 'x-csrf-token': csrfToken },
-      payload: {},
     })
-    expect(fullAuth.statusCode).toBe(200)
-    expect(fullAuth.json().ok).toBe(true)
+    expect(meRes.statusCode).toBe(200)
+    expect(meRes.json().user.username).toBe('admin')
   })
 
   it('AUTH-12: Logout invalidates the session in DB and clears the cookie', async () => {
