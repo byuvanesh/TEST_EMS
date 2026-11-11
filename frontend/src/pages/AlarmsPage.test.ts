@@ -52,7 +52,7 @@ describe('Step 6d: Alarm count definition consistency (2 vs 3 fix)', () => {
     const updated = acknowledgeAlarm(
       alarms,
       'alm-demo-001',
-      'demo.operator',
+      'simulated.operator',
       '2026-10-30T12:00:00+05:30',
     )
 

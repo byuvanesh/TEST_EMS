@@ -75,13 +75,13 @@ describe('acknowledgeAlarm', () => {
     const next = acknowledgeAlarm(
       alarms,
       'alm-demo-001',
-      'demo.operator',
+      'simulated.operator',
       '2026-10-30T12:00:00+05:30',
     )
 
     const target = next.find((a) => a.id === 'alm-demo-001')
     expect(target?.status).toBe('acknowledged')
-    expect(target?.acknowledgedBy).toBe('demo.operator')
+    expect(target?.acknowledgedBy).toBe('simulated.operator')
     expect(target?.acknowledgedAt).toBe('2026-10-30T12:00:00+05:30')
     expect(target?.dataState).toBe('DEMO')
 
@@ -98,6 +98,6 @@ describe('acknowledgeAlarm', () => {
       '2026-10-30T13:00:00+05:30',
     )
     const target = next.find((a) => a.id === 'alm-demo-003')
-    expect(target?.acknowledgedBy).toBe('demo.operator')
+    expect(target?.acknowledgedBy).toBe('simulated.operator')
   })
 })

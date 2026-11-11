@@ -35,7 +35,7 @@ export function DemandProfileChart({
   if (data.length === 0) {
     return (
       <div className="flex h-[280px] w-full items-center justify-center rounded-[8px] border border-dashed border-border bg-surface text-xs text-text-secondary">
-        No power samples in this DEMO period.
+        No power samples in this period.
       </div>
     )
   }

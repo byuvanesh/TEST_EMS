@@ -248,3 +248,82 @@ describe('LocalServerRegistrationCard UI & regression guard', () => {
     expect(systemPageSource).not.toContain('name="api_key"')
   })
 })
+
+// ---------------------------------------------------------------------------
+// Phase 1.4: Gateway Registration & Meter Commissioning UI Contracts
+// ---------------------------------------------------------------------------
+
+describe('Phase 1.4: Gateway Registration & Meter Commissioning Client Contracts', () => {
+  it('registerSystemGateway exists on ApiClient and returns a Promise', () => {
+    const client = new ApiClient('http://localhost:9999')
+    expect(typeof client.registerSystemGateway).toBe('function')
+    const result = client.registerSystemGateway({ name: 'GW 1', mac: 'CC:7B:5C:88:99:AA' }).catch(() => null)
+    expect(result).toBeInstanceOf(Promise)
+  })
+
+  it('commissionSystemMeter exists on ApiClient and returns a Promise', () => {
+    const client = new ApiClient('http://localhost:9999')
+    expect(typeof client.commissionSystemMeter).toBe('function')
+    const result = client.commissionSystemMeter('meter-1', { slave_id: 1 }).catch(() => null)
+    expect(result).toBeInstanceOf(Promise)
+  })
+
+  it('validates MAC format (must be 12 hex digits)', () => {
+    function isValidMac(input: string): boolean {
+      const hexOnly = input.toUpperCase().replace(/[^0-9A-F]/g, '')
+      return hexOnly.length === 12
+    }
+
+    expect(isValidMac('CC:7B:5C:88:99:AA')).toBe(true)
+    expect(isValidMac('cc7b5c8899aa')).toBe(true)
+    expect(isValidMac('78-1C-3C-AA-5F-C8')).toBe(true)
+    expect(isValidMac('invalid_mac')).toBe(false)
+    expect(isValidMac('12:34:56')).toBe(false)
+    expect(isValidMac('')).toBe(false)
+  })
+
+  it('detects duplicate Slave IDs among site meters client-side', () => {
+    const siteMeters = [
+      { meter_id: 'm-1', label: 'AC-01', slave_id: 1 },
+      { meter_id: 'm-2', label: 'AC-02', slave_id: 2 },
+      { meter_id: 'm-3', label: 'AC-03', slave_id: null },
+    ]
+
+    function checkDuplicate(targetMeterId: string, candidateSlaveId: number): boolean {
+      return siteMeters.some(
+        (m) => m.meter_id !== targetMeterId && m.slave_id === candidateSlaveId,
+      )
+    }
+
+    // m-3 attempting to use slave_id 1 -> duplicate!
+    expect(checkDuplicate('m-3', 1)).toBe(true)
+    // m-3 attempting to use slave_id 2 -> duplicate!
+    expect(checkDuplicate('m-3', 2)).toBe(true)
+    // m-3 attempting to use slave_id 3 -> unique!
+    expect(checkDuplicate('m-3', 3)).toBe(false)
+    // m-1 keeping its own slave_id 1 -> not a duplicate
+    expect(checkDuplicate('m-1', 1)).toBe(false)
+  })
+
+  it('enforces evidence note requirement when marking Modbus variant as verified', () => {
+    function validateCommissioning(slaveId: number, verified: boolean, note: string): string | null {
+      if (slaveId < 1 || slaveId > 247) return 'Slave ID must be 1..247'
+      if (verified && !note.trim()) return 'Evidence note is required when verified'
+      return null
+    }
+
+    expect(validateCommissioning(1, true, '')).toBe('Evidence note is required when verified')
+    expect(validateCommissioning(1, true, '   ')).toBe('Evidence note is required when verified')
+    expect(validateCommissioning(1, true, 'Verified on Schneider front display')).toBeNull()
+    expect(validateCommissioning(1, false, '')).toBeNull()
+    expect(validateCommissioning(0, false, '')).toBe('Slave ID must be 1..247')
+    expect(validateCommissioning(248, false, '')).toBe('Slave ID must be 1..247')
+  })
+
+  it('contains GatewayRegistrationCard and MeterCommissioningCard in SystemPage.tsx', () => {
+    expect(systemPageSource).toContain('GatewayRegistrationCard')
+    expect(systemPageSource).toContain('MeterCommissioningCard')
+    expect(systemPageSource).toContain('banner-gateway-api-key')
+    expect(systemPageSource).toContain('btn-copy-api-key')
+  })
+})

@@ -2,13 +2,13 @@ import type { DataQualityState } from '@/types'
 import { cn } from '@/lib/cn'
 
 const STYLES: Record<DataQualityState, string> = {
-  LIVE: 'bg-success/10 text-success border-success/20',
-  STALE: 'bg-warning/10 text-warning-text border-warning/25',
-  OFFLINE: 'bg-critical/10 text-critical border-critical/20',
-  DEMO: 'bg-surface text-text-secondary border-border',
-  NO_DATA: 'bg-surface text-text-secondary border-border',
-  UNKNOWN: 'bg-surface text-text-secondary border-border',
-  UNVERIFIED: 'bg-amber-500/10 text-amber-600 border-amber-500/25',
+  LIVE: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+  STALE: 'bg-rose-50 text-rose-700 border-rose-200/80',
+  OFFLINE: 'bg-slate-100 text-slate-700 border-slate-200',
+  DEMO: 'bg-amber-50 text-amber-800 border-amber-200/80',
+  NO_DATA: 'bg-slate-50 text-slate-500 border-slate-200',
+  UNKNOWN: 'bg-slate-100 text-slate-700 border-slate-200',
+  UNVERIFIED: 'bg-amber-50 text-amber-800 border-amber-200/80',
 }
 
 interface StatusBadgeProps {
@@ -18,12 +18,12 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ state, className, compact }: StatusBadgeProps) {
-  const label = state === 'DEMO' ? 'DEMO DATA' : state
+  const label = state === 'DEMO' ? 'SIMULATED DATA' : state
 
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-md border font-medium tracking-wide uppercase',
+        'inline-flex items-center rounded-[4px] border font-medium tracking-wide uppercase transition-colors',
         compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-[11px]',
         STYLES[state],
         className,

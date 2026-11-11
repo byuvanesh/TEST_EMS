@@ -1,6 +1,6 @@
 import type { EnergyPeriodPreset, PeriodBounds } from '@/types'
 
-/** Anchor "now" for deterministic DEMO periods (IST). */
+/** Anchor "now" for deterministic SIMULATED periods (IST). */
 export const DEMO_ANCHOR = '2026-10-30T11:45:00+05:30'
 
 function pad(n: number): string {

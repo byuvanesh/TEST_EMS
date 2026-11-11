@@ -1,27 +1,30 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #f7f9fc;
+  --color-bg: #f8fafc;
   --color-card: #ffffff;
-  --color-surface: #f1f4f9;
-  --color-text: #172033;
-  --color-text-secondary: #64748b;
-  --color-border: #e5eaf1;
+  --color-surface: #f1f5f9;
+  --color-text: #0f172a;
+  --color-text-secondary: #475569;
+  --color-border: #e2e8f0;
   --color-accent: #2563eb;
-  --color-success: #16a36a;
-  --color-warning: #d99020;
-  --color-warning-text: #9a6410;
-  --color-critical: #dc4545;
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-warning-text: #b45309;
+  --color-critical: #dc2626;
 
   --color-load-ac01: #3b82f6;
   --color-load-ac02: #0d9488;
   --color-load-ac03: #7c3aed;
   --color-load-comp: #db2777;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --radius-card: 12px;
-  --radius-control: 8px;
-  --shadow-popover: 0 4px 16px rgba(23, 32, 51, 0.08);
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --radius-card: 8px;
+  --radius-control: 6px;
+  --radius-badge: 4px;
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
+  --shadow-popover: 0 4px 16px rgba(15, 23, 42, 0.08);
 }
 
 @layer base {
@@ -31,19 +34,49 @@
     background-color: var(--color-bg);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
+    scroll-padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 768px) {
+    html {
+      scroll-padding-bottom: 1.25rem;
+    }
   }
 
   body {
     margin: 0;
     min-height: 100vh;
+    min-height: 100dvh;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    -webkit-tap-highlight-color: transparent;
   }
 
   #root {
     min-height: 100vh;
+    min-height: 100dvh;
   }
 
   .tabular {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
   }
+
+  /* Mobile horizontal scroll without visible ugly scrollbars */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
+
+@media (max-width: 374px) {
+  .hide-below-375 {
+    display: none !important;
+  }
+}
+

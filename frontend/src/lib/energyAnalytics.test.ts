@@ -43,7 +43,7 @@ describe('buildEnergyAnalytics', () => {
     expect(result.loadRows).toHaveLength(4)
     expect(result.coveragePct).toBeGreaterThan(0)
     expect(result.demandIntervalNote).toMatch(/TBD/i)
-    expect(result.energyMethodNote).toMatch(/DEMO/i)
+    expect(result.energyMethodNote).toMatch(/SIMULATED/i)
     expect(result.partialPeriod).toBe(true)
     expect(result.chartAggregation).toBe('hourly')
 
@@ -84,7 +84,7 @@ describe('buildEnergyAnalytics', () => {
     })
     const csv = buildEnergyCsv(result)
 
-    expect(csv).toContain('DEMO DATA')
+    expect(csv).toContain('SIMULATED DATA')
     expect(csv).toContain('AC-02')
     expect(csv).not.toContain('\nAC-01,')
     expect(csv).toContain(String(result.energyKwh))

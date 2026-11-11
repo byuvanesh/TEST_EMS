@@ -1,7 +1,7 @@
 /**
- * Canonical DEMO telemetry series — single generator for Overview, Energy, Load Detail.
+ * Canonical SIMULATED telemetry series — single generator for Overview, Energy, Load Detail.
  *
- * DEMO convention only: when a sample is present, hourly active power (kW) × 1 hour ≈ kWh.
+ * SIMULATED convention only: when a sample is present, hourly active power (kW) × 1 hour ≈ kWh.
  * Missing samples are `null` (never coerced to 0). This is not meter-counter energy and
  * must never be reused for REAL telemetry derivation.
  */

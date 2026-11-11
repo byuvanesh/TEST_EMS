@@ -2,7 +2,7 @@ import type { LoadDefinition, LoadId } from '@/types'
 
 /**
  * Site load catalogue (confirmed names/colours/capacities).
- * Not telemetry — keep separate from DEMO series generators.
+ * Not telemetry — keep separate from SIMULATED series generators.
  */
 export const LOAD_DEFINITIONS: LoadDefinition[] = [
   {

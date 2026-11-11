@@ -32,7 +32,7 @@ export function SelectField({
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className="h-9 rounded-[8px] border border-border bg-card px-2.5 text-sm text-text outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-60"
+        className="h-8 rounded-[6px] border border-border bg-card px-2.5 text-xs text-text outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>

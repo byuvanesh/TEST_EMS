@@ -1,7 +1,7 @@
 /**
- * DEMO energy analytics derived from the canonical DEMO series only.
+ * SIMULATED energy analytics derived from the canonical SIMULATED series only.
  *
- * Method (DEMO-only): sum of hourly active-power samples (kW × 1 h ≈ kWh).
+ * Method (SIMULATED-only): sum of hourly active-power samples (kW × 1 h ≈ kWh).
  * Null samples are excluded from sums. Zero means a reported zero, not a gap.
  * Do not reuse for REAL meter-counter energy.
  */
@@ -42,7 +42,7 @@ export function resolveIncludedLoads(filter: LoadFilter): LoadId[] {
 export { demoPowerKw } from '@/lib/demoSeries'
 
 const ENERGY_METHOD_NOTE =
-  'DEMO method: hourly kW × 1 h ≈ kWh. Not meter import-counter deltas. Not for REAL telemetry.'
+  'SIMULATED method: hourly kW × 1 h ≈ kWh. Not meter import-counter deltas. Not for REAL telemetry.'
 
 function bucketLabel(at: Date, preset: PeriodBounds['preset']): string {
   if (preset === 'today' || preset === 'yesterday') {
@@ -296,7 +296,7 @@ export function buildEnergyAnalytics(
     partialPeriodMessage: null,
     coverageCompareNote: null,
     demandIntervalNote:
-      'Demand interval is TBD — peak power below is demo hourly max, not a billing demand.',
+      'Demand interval is TBD — peak power below is simulated hourly max, not a billing demand.',
     energyMethodNote: ENERGY_METHOD_NOTE,
     chartAggregation: 'hourly',
     energySeries: [],
@@ -335,7 +335,7 @@ export function buildEnergyAnalytics(
   const coverageGap = Math.abs(coverage.coveragePct - previousCoverage.coveragePct)
   const coverageCompareNote =
     coverageGap >= 10
-      ? `Coverage differs vs previous window (${coverage.coveragePct}% vs ${previousCoverage.coveragePct}%). Treat Δ% as directional DEMO only.`
+      ? `Coverage differs vs previous window (${coverage.coveragePct}% vs ${previousCoverage.coveragePct}%). Treat Δ% as directional SIMULATED only.`
       : null
 
   const partial = isPartialPeriod(period)
@@ -361,7 +361,7 @@ export function buildEnergyAnalytics(
     partialPeriodMessage: partialPeriodMessage(period),
     coverageCompareNote,
     demandIntervalNote:
-      'Demand interval is TBD — peak shown is demo max of hourly samples, not a verified billing demand.',
+      'Demand interval is TBD — peak shown is simulated max of hourly samples, not a verified billing demand.',
     energyMethodNote: ENERGY_METHOD_NOTE,
     chartAggregation: shouldAggregateDaily(period, currentSamples.length)
       ? 'daily'
@@ -410,8 +410,8 @@ export function buildEnergyCsv(result: EnergyAnalyticsResult): string {
   )
 
   return [
-    `# TEST_EMS DEMO DATA export — not live meter readings`,
-    `# DATA_SOURCE: DEMO`,
+    `# TEST_EMS SIMULATED DATA export — not live meter readings`,
+    `# DATA_SOURCE: SIMULATED`,
     `# Period: ${result.period.label}`,
     `# Units: energy_kwh (kWh), power (kW)`,
     `# ${ENERGY_METHOD_NOTE}`,

@@ -13,7 +13,6 @@ import {
   countUnacknowledged,
   filterOpenAlarms,
 } from '@/lib/alarmFilters'
-import { createDemoAlarms } from '@/mock/alarmsDemoData'
 import type { AlarmItem } from '@/types'
 
 interface AlarmStoreValue {
@@ -28,15 +27,15 @@ interface AlarmStoreValue {
 const AlarmStoreContext = createContext<AlarmStoreValue | null>(null)
 
 export function AlarmProvider({ children }: { children: ReactNode }) {
-  const [alarms, setAlarms] = useState<AlarmItem[]>(() => createDemoAlarms())
+  const [alarms, setAlarms] = useState<AlarmItem[]>([])
 
   const acknowledge = useCallback((alarmId: string) => {
     setAlarms((prev) =>
       acknowledgeAlarm(
         prev,
         alarmId,
-        'demo.operator',
-        '2026-10-30T12:00:00+05:30',
+        'operator',
+        new Date().toISOString(),
       ),
     )
   }, [])

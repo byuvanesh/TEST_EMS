@@ -17,18 +17,20 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <div className={cn('mb-6', className)}>
-      {breadcrumbs ? <div className="mb-2">{breadcrumbs}</div> : null}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-text">
+    <div className={cn('mb-3 sm:mb-5', className)}>
+      {breadcrumbs ? <div className="mb-1">{breadcrumbs}</div> : null}
+      <div className="flex items-center justify-between gap-2.5">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-xl font-bold sm:font-semibold tracking-tight text-text truncate">
             {title}
           </h1>
           {description ? (
-            <p className="mt-1 text-sm text-text-secondary">{description}</p>
+            <p className="mt-0.5 text-xs text-text-secondary leading-normal hidden sm:block">
+              {description}
+            </p>
           ) : null}
         </div>
-        {actions}
+        {actions ? <div className="shrink-0">{actions}</div> : null}
       </div>
     </div>
   )

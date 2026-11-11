@@ -59,7 +59,7 @@ export const COMMUNICATION_FIELDS: ConfigField[] = [
     label: 'Meters reporting',
     value: '0 / 4',
     certainty: 'NOT_CONFIGURED',
-    note: 'DEMO placeholder — not a Modbus success rate.',
+    note: 'SIMULATED placeholder — not a Modbus success rate.',
   },
   {
     label: 'Poll interval',

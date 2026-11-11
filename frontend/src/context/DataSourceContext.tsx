@@ -1,11 +1,10 @@
 /**
- * DataSourceContext: Controls REAL vs DEMO telemetry source across the frontend.
+ * DataSourceContext: REAL DATA ONLY Energy Management System.
  *
  * Requirements:
- * - REAL is the default.
- * - Explicit toggle between REAL and DEMO.
- * - Complete separation from canonical demo series (REAL mode never touches demo mock data).
- * - Visible badge when DEMO is active.
+ * - Application is strictly REAL-DATA ONLY.
+ * - SIMULATED mode, simulated telemetry, and switching controls are completely disabled.
+ * - Always reports dataSource = 'REAL', isReal = true, isDemo = false.
  */
 
 import {
@@ -13,11 +12,10 @@ import {
   useCallback,
   useContext,
   useMemo,
-  useState,
   type ReactNode,
 } from 'react'
 
-export type DataSource = 'REAL' | 'DEMO'
+export type DataSource = 'REAL'
 
 interface DataSourceContextValue {
   dataSource: DataSource
@@ -33,49 +31,38 @@ const DataSourceContext = createContext<DataSourceContextValue | null>(null)
 
 export function DataSourceProvider({
   children,
-  initialSource = 'REAL',
 }: {
   children: ReactNode
   initialSource?: DataSource
 }) {
-  const [dataSource, setSourceState] = useState<DataSource>(() => {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        const saved = window.localStorage.getItem(STORAGE_KEY)
-        if (saved === 'REAL' || saved === 'DEMO') {
-          return saved
-        }
-      } catch {
-        // Storage access blocked or unavailable
+  // Purge any legacy simulated selection from storage
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      if (window.localStorage.getItem(STORAGE_KEY)) {
+        window.localStorage.removeItem(STORAGE_KEY)
       }
+    } catch {
+      // Storage access blocked or unavailable
     }
-    return initialSource
-  })
+  }
 
-  const setDataSource = useCallback((source: DataSource) => {
-    setSourceState(source)
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        window.localStorage.setItem(STORAGE_KEY, source)
-      } catch {
-        // Ignore storage access errors
-      }
-    }
+  const setDataSource = useCallback((_source: DataSource) => {
+    // No-op: Application is strictly locked to REAL data
   }, [])
 
   const toggleDataSource = useCallback(() => {
-    setDataSource(dataSource === 'REAL' ? 'DEMO' : 'REAL')
-  }, [dataSource, setDataSource])
+    // No-op: Application is strictly locked to REAL data
+  }, [])
 
   const value = useMemo<DataSourceContextValue>(
     () => ({
-      dataSource,
+      dataSource: 'REAL',
       setDataSource,
       toggleDataSource,
-      isDemo: dataSource === 'DEMO',
-      isReal: dataSource === 'REAL',
+      isDemo: false,
+      isReal: true,
     }),
-    [dataSource, setDataSource, toggleDataSource],
+    [setDataSource, toggleDataSource],
   )
 
   return (

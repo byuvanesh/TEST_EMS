@@ -8,7 +8,11 @@ import { OverviewPage } from '@/pages/OverviewPage'
 import { EnergyPage } from '@/pages/EnergyPage'
 import { AlarmsPage } from '@/pages/AlarmsPage'
 import { SystemPage } from '@/pages/SystemPage'
+import { SettingsPage } from '@/pages/SettingsPage'
 import { LoadDetailPage } from '@/pages/LoadDetailPage'
+import { GatewayDetailsPage } from '@/pages/GatewayDetailsPage'
+import { CustomMappingPage } from '@/pages/CustomMappingPage'
+import { ParameterMappingPage } from '@/pages/ParameterMappingPage'
 import { LoginPage } from '@/pages/LoginPage'
 
 export function AppRouter() {
@@ -25,6 +29,10 @@ export function AppRouter() {
             <Route path="energy" element={<EnergyPage />} />
             <Route path="alarms" element={<AlarmsPage />} />
             <Route path="system" element={<SystemPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="gateway" element={<GatewayDetailsPage />} />
+            <Route path="mapping" element={<CustomMappingPage />} />
+            <Route path="parameter-mapping" element={<ParameterMappingPage />} />
             <Route path="loads/:loadId" element={<LoadDetailPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

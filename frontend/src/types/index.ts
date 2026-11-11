@@ -16,7 +16,7 @@ export type AlarmSeverity = 'critical' | 'warning' | 'info'
 
 export type AlarmStatus = 'active' | 'acknowledged' | 'cleared'
 
-/** Demo alarm categories — limits themselves are TBD. */
+/** SIMULATED alarm categories — limits themselves are TBD. */
 export type AlarmType =
   | 'overcurrent'
   | 'undervoltage'
@@ -75,7 +75,7 @@ export interface KpiSnapshot {
   unit: string
   asOf: string
   dataState: DataQualityState
-  /** Optional supporting note, e.g. "3 of 4 loads (demo)" */
+  /** Optional supporting note, e.g. "3 of 4 loads (simulated)" */
   note?: string
 }
 
@@ -88,7 +88,7 @@ export interface PowerSeriesPoint {
   'Compressor-01': number | null
 }
 
-/** Canonical DEMO hourly sample — null means missing (not zero load). */
+/** Canonical SIMULATED hourly sample — null means missing (not zero load). */
 export interface DemoHourlySample {
   timestamp: string
   hourLabel: string
@@ -192,7 +192,7 @@ export interface EnergyAnalyticsResult {
   coverageCompareNote: string | null
   /** Demand interval is TBD — never claim a verified interval. */
   demandIntervalNote: string
-  /** DEMO-only: hourly kW × 1 h ≈ kWh. Not meter-counter energy. */
+  /** SIMULATED-only: hourly kW × 1 h ≈ kWh. Not meter-counter energy. */
   energyMethodNote: string
   /** Whether chart series were rolled up to daily buckets. */
   chartAggregation: 'hourly' | 'daily'

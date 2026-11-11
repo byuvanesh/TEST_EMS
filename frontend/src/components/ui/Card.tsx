@@ -9,15 +9,15 @@ interface CardProps {
 
 const PADDING = {
   none: '',
-  sm: 'p-4',
-  md: 'p-5',
+  sm: 'p-3.5 sm:p-4',
+  md: 'p-4 sm:p-5',
 } as const
 
 export function Card({ children, className, padding = 'md' }: CardProps) {
   return (
     <div
       className={cn(
-        'rounded-[12px] border border-border bg-card',
+        'rounded-[8px] border border-border bg-card shadow-xs transition-shadow',
         PADDING[padding],
         className,
       )}
@@ -43,9 +43,9 @@ export function CardHeader({
   return (
     <div className={cn('mb-4 flex items-start justify-between gap-3', className)}>
       <div>
-        <h2 className="text-sm font-semibold text-text">{title}</h2>
+        <h2 className="text-sm font-semibold tracking-tight text-text">{title}</h2>
         {subtitle ? (
-          <p className="mt-0.5 text-xs text-text-secondary">{subtitle}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-text-secondary">{subtitle}</p>
         ) : null}
       </div>
       {action}

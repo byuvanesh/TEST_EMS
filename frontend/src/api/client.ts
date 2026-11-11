@@ -30,6 +30,30 @@ export interface ChangePasswordResponse {
   mustChangePassword: boolean
 }
 
+export interface ApiBranding {
+  company_name: string
+  logo_url: string | null
+  show_attribution: boolean
+  attribution_text: string
+  website_link_enabled: boolean
+  website_link_text: string
+  website_link_url: string
+  favicon_url: string | null
+  has_custom_favicon: boolean
+  updated_at: string
+}
+
+export interface PutBrandingPayload {
+  company_name?: string
+  logo_base64?: string | null
+  show_attribution?: boolean
+  attribution_text?: string
+  website_link_enabled?: boolean
+  website_link_text?: string
+  website_link_url?: string
+  favicon_base64?: string | null
+}
+
 export interface ApiCatalogueLoad {
   id: string
   site_id: string
@@ -270,6 +294,7 @@ export interface ApiGatewayMeterState {
   slave_id: number | null
   state_assurance: 'gateway-level only'
   status: 'online' | 'unknown'
+  modbus_variant_verified?: boolean
   note: string
 }
 
@@ -278,14 +303,52 @@ export interface ApiSystemGatewayResponse {
     id: string
     code: string
     name: string
-    mac: string
+    mac: string | null
     firmware_version: string | null
     rs485_master_verified: boolean
+    is_registered?: boolean
+    has_auth_key?: boolean
     status: 'connected' | 'polling' | 'disconnected' | 'disabled' | string
     mode: 'websocket' | 'poll' | 'none' | string
     last_receive_time: string | null
   }
   meters: ApiGatewayMeterState[]
+}
+
+export interface ApiRegisterGatewayPayload {
+  name: string
+  mac: string
+  gateway_id?: string
+}
+
+export interface ApiRegisterGatewayResponse {
+  ok: boolean
+  gateway: {
+    id: string
+    code: string
+    name: string
+    mac: string
+    is_registered: boolean
+  }
+  api_key: string
+  warning: string
+}
+
+export interface ApiCommissionMeterPayload {
+  slave_id: number
+  modbus_variant_verified?: boolean
+  evidence_note?: string
+}
+
+export interface ApiCommissionMeterResponse {
+  ok: boolean
+  meter: {
+    id: string
+    label: string
+    slave_id: number
+    modbus_variant_verified: boolean
+    status: string
+  }
 }
 
 export interface ApiBridgeMetrics {
@@ -315,6 +378,100 @@ export interface ApiBridgeStatusResponse {
  */
 export interface ApiSystemConfigResponse {
   local_server_url: string
+}
+
+// --- Gateway Connection Status ---
+
+export type GatewayConnectionState =
+  | 'NOT_CONNECTED'
+  | 'ONLINE'
+  | 'STALE'
+  | 'OFFLINE'
+  | 'CONNECTED_NO_DATA'
+  | 'DATA_RECEIVING'
+  | 'INGEST_ERROR'
+
+export interface ApiGatewayThresholds {
+  online_seconds: number
+  stale_seconds: number
+  offline_seconds: number
+}
+
+export interface ApiGatewayTotals {
+  heartbeats: number
+  telemetry_uploads: number
+  ingest_errors: number
+  auth_errors: number
+  validation_errors: number
+}
+
+export interface ApiGatewayConnectionStatusResponse {
+  gateway: {
+    id: string
+    code: string
+    name: string
+    mac: string | null
+    firmware_version: string | null
+    source_type: string
+    connection_state: GatewayConnectionState
+    last_heartbeat_at: string | null
+    last_telemetry_at: string | null
+    last_ingest_error_at: string | null
+    last_ingest_error_message: string | null
+    connection_duration_seconds: number | null
+    migration_required?: boolean
+    migration_message?: string | null
+    thresholds: ApiGatewayThresholds
+    totals: ApiGatewayTotals
+  }
+}
+
+export interface ApiGatewayHistoryItem {
+  id: number
+  event_type: 'heartbeat' | 'telemetry' | 'command_poll' | 'auth_error' | 'validation_error' | 'ingest_error'
+  firmware_version: string | null
+  status: string | null
+  source_type: string
+  received_at: string
+  error_message: string | null
+  raw_payload_hash: string | null
+}
+
+export interface ApiGatewayHistoryResponse {
+  gateway_id: string
+  gateway_mac: string
+  history: ApiGatewayHistoryItem[]
+  limit: number
+  offset: number
+  migration_required?: boolean
+  migration_message?: string | null
+}
+
+// --- Mapping Copy / Reset ---
+
+export interface CopyMappingBody {
+  source_meter_id: string
+  target_meter_id: string
+  overwrite: boolean
+}
+
+export interface CopyMappingResponse {
+  ok: boolean
+  source_meter_id: string
+  target_meter_id: string
+  copiedCount: number
+  overwritten: boolean
+}
+
+export interface ResetMappingDefaultsBody {
+  meter_id: string
+}
+
+export interface ResetMappingDefaultsResponse {
+  ok: boolean
+  meter_id: string
+  resetCount: number
+  message: string
 }
 
 export class ApiError extends Error {
@@ -510,6 +667,28 @@ export class ApiClient {
     return this.request<ApiSystemGatewayResponse>('/api/system/gateway')
   }
 
+  public async registerSystemGateway(
+    payload: ApiRegisterGatewayPayload,
+  ): Promise<ApiRegisterGatewayResponse> {
+    return this.request<ApiRegisterGatewayResponse>('/api/system/gateway/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  public async commissionSystemMeter(
+    meterId: string,
+    payload: ApiCommissionMeterPayload,
+  ): Promise<ApiCommissionMeterResponse> {
+    return this.request<ApiCommissionMeterResponse>(
+      `/api/system/meters/${encodeURIComponent(meterId)}/commission`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      },
+    )
+  }
+
   public async getBridgeStatus(): Promise<ApiBridgeStatusResponse> {
     return this.request<ApiBridgeStatusResponse>('/api/bridge/status')
   }
@@ -521,6 +700,80 @@ export class ApiClient {
    */
   public async getSystemConfig(): Promise<ApiSystemConfigResponse> {
     return this.request<ApiSystemConfigResponse>('/api/system/config')
+  }
+
+  // --- Gateway Connection Status endpoints ---
+
+  public async getGatewayStatus(): Promise<ApiGatewayConnectionStatusResponse> {
+    return this.request<ApiGatewayConnectionStatusResponse>('/api/system/gateway/status')
+  }
+
+  public async getGatewayLatestPayload(): Promise<{
+    ok: boolean
+    hasPayload: boolean
+    payloadId: number | null
+    gatewayId: string | null
+    gatewayMac: string | null
+    localServerTs: number | null
+    receivedAt: string | null
+    decodeStatus: string | null
+    mappingVersion: number | null
+    payload: Record<string, unknown> | null
+  }> {
+    return this.request(
+      '/api/system/gateway/latest-payload',
+    )
+  }
+
+  public async getGatewayHistory(
+    params?: { event_type?: string; status?: string; limit?: number; offset?: number },
+  ): Promise<ApiGatewayHistoryResponse> {
+    const searchParams = new URLSearchParams()
+    if (params?.event_type) searchParams.set('event_type', params.event_type)
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.limit) searchParams.set('limit', String(params.limit))
+    if (params?.offset) searchParams.set('offset', String(params.offset))
+    const qs = searchParams.toString()
+    return this.request<ApiGatewayHistoryResponse>(
+      `/api/system/gateway/history${qs ? `?${qs}` : ''}`,
+    )
+  }
+
+  // --- Mapping Copy / Reset endpoints ---
+
+  public async copyMapping(body: CopyMappingBody): Promise<CopyMappingResponse> {
+    return this.request<CopyMappingResponse>('/api/system/mappings/copy', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  }
+
+  public async resetMappingDefaults(body: ResetMappingDefaultsBody): Promise<ResetMappingDefaultsResponse> {
+    return this.request<ResetMappingDefaultsResponse>('/api/system/mappings/reset-defaults', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  }
+
+  // --- Company Branding endpoints ---
+
+  public async getBranding(): Promise<ApiBranding> {
+    return this.request<ApiBranding>('/api/system/branding')
+  }
+
+  public async putBranding(
+    payload: PutBrandingPayload,
+  ): Promise<{ ok: boolean; branding: ApiBranding }> {
+    return this.request<{ ok: boolean; branding: ApiBranding }>('/api/system/branding', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  public async resetBranding(): Promise<{ ok: boolean; branding: ApiBranding }> {
+    return this.request<{ ok: boolean; branding: ApiBranding }>('/api/system/branding/reset', {
+      method: 'POST',
+    })
   }
 }
 

@@ -34,7 +34,7 @@ export function EnergyByLoadChart({
   if (data.length === 0) {
     return (
       <div className="flex h-[280px] w-full items-center justify-center rounded-[8px] border border-dashed border-border bg-surface text-xs text-text-secondary">
-        No energy samples in this DEMO period.
+        No energy samples in this period.
       </div>
     )
   }

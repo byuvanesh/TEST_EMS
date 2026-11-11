@@ -136,7 +136,7 @@ describe('UI-1 alarm state consistency', () => {
     const next = acknowledgeAlarm(
       alarms,
       'alm-demo-001',
-      'demo.operator',
+      'simulated.operator',
       '2026-10-30T12:00:00+05:30',
     )
     expect(countOpen(next)).toBe(3)

@@ -1,5 +1,5 @@
 /**
- * DEMO overview bundle derived from the canonical DEMO series.
+ * SIMULATED overview bundle derived from the canonical SIMULATED series.
  * No independent power generators — Overview / Energy / Load Detail share one source.
  */
 
@@ -28,20 +28,20 @@ import type {
 
 const SITE: SiteInfo = {
   id: 'site-demo-01',
-  name: 'TEST_EMS Demo Site',
+  name: 'TEST_EMS',
   timezone: 'Asia/Kolkata',
   timezoneLabel: 'IST',
 }
 
 const GATEWAY: GatewayStatus = {
   id: 'gw-demo-01',
-  name: 'Site gateway (demo)',
+  name: 'Site gateway (simulated)',
   linkState: 'unknown',
   lastHeardAt: null,
   metersOnline: 0,
   metersTotal: 4,
   dataState: 'DEMO',
-  note: 'Gateway hardware and Modbus master capability are unverified. This strip shows DEMO DATA only — not live communication status.',
+  note: 'Gateway hardware and Modbus master capability are unverified. This strip shows SIMULATED DATA only — not live communication status.',
 }
 
 function startOfDemoDayIso(asOfIso: string): string {
@@ -119,7 +119,7 @@ function buildKpis(
       unit: 'kW',
       asOf: asOfIso,
       dataState: 'DEMO',
-      note: `${reporting} of ${loads.length} loads (demo)`,
+      note: `${reporting} of ${loads.length} loads (simulated)`,
     },
     {
       id: 'energy-today',
@@ -128,7 +128,7 @@ function buildKpis(
       unit: 'kWh',
       asOf: asOfIso,
       dataState: 'DEMO',
-      note: 'DEMO · incomplete day through snapshot',
+      note: 'SIMULATED · incomplete day through snapshot',
     },
     {
       id: 'peak-demand',
@@ -137,7 +137,7 @@ function buildKpis(
       unit: 'kW',
       asOf: asOfIso,
       dataState: 'DEMO',
-      note: 'Interval TBD · demo hourly max today',
+      note: 'Interval TBD · simulated hourly max today',
     },
     {
       id: 'aggregate-pf',
@@ -146,7 +146,7 @@ function buildKpis(
       unit: '',
       asOf: asOfIso,
       dataState: 'DEMO',
-      note: 'Mean of reporting loads (demo)',
+      note: 'Mean of reporting loads (simulated)',
     },
     {
       id: 'active-alarms',

@@ -44,8 +44,8 @@ function headingFromPayload(
       ? String(row[timestampKey])
       : null
   return iso
-    ? `${formatIstChartTimestamp(iso)} · DEMO DATA`
-    : `${String(label ?? '')} · DEMO DATA`
+    ? formatIstChartTimestamp(iso)
+    : String(label ?? '')
 }
 
 export function SeriesTooltip({

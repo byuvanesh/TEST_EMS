@@ -31,7 +31,7 @@ export function Drawer({
       />
       <aside
         className={cn(
-          'relative flex h-full w-full max-w-md flex-col border-l border-border bg-card shadow-[0_4px_16px_rgba(23,32,51,0.08)]',
+          'relative flex h-full w-full max-w-md flex-col border-l border-border bg-card shadow-popover',
           className,
         )}
         role="dialog"
@@ -39,11 +39,11 @@ export function Drawer({
         aria-label={title}
       >
         <div className="flex h-14 items-center justify-between border-b border-border px-4">
-          <h2 className="text-sm font-semibold text-text">{title}</h2>
+          <h2 className="text-sm font-semibold tracking-tight text-text">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-[8px] p-1.5 text-text-secondary hover:bg-surface"
+            className="rounded-[6px] p-1.5 text-text-secondary hover:bg-surface hover:text-text transition-colors"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
